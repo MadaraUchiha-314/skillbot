@@ -7,11 +7,22 @@ authors = [
     { name = "MadaraUchiha-314", email = "rohithr31+github@gmail.com" },
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "a2a-sdk[http-server]>=0.3.24",
+    "click>=8.3.1",
+    "fastapi>=0.131.0",
+    "langchain-core>=1.2.14",
+    "langchain-openai>=1.1.10",
+    "langgraph>=1.0.9",
+    "langgraph-checkpoint-sqlite>=3.0.3",
+    "python-frontmatter>=1.1.0",
+    "uvicorn>=0.41.0",
+    "streamlit>=1.45.0",
+]
 license = { file = "LICENSE" }
 
 [project.scripts]
-skillbot = "skillbot:main"
+skillbot = "skillbot.cli.cli:cli"
 
 [build-system]
 requires = ["hatchling"]
@@ -42,6 +53,12 @@ python_version = "3.13"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+warn_unused_ignores = false
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "skillbot.cli.cli"
+disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
