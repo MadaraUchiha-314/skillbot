@@ -106,17 +106,24 @@ jobs:
       - name: Bump version
         id: bump
         run: |
-          uv run cz bump --yes --changelog 2>&1 || echo "No version bump needed"
-          echo "version=$(uv run cz version)" >> "$GITHUB_OUTPUT"
+          OLD_VERSION=$(uv run cz version)
+          uv run cz bump --yes --changelog 2>&1 && BUMPED=true || BUMPED=false
+          NEW_VERSION=$(uv run cz version)
+          echo "old_version=$OLD_VERSION" >> "$GITHUB_OUTPUT"
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "bumped=$BUMPED" >> "$GITHUB_OUTPUT"
 
       - name: Push changes
+        if: steps.bump.outputs.bumped == 'true'
         run: git push --follow-tags
 
     outputs:
       version: ${{ steps.bump.outputs.version }}
+      bumped: ${{ steps.bump.outputs.bumped }}
 
   publish:
     needs: [bump-version]
+    if: needs.bump-version.outputs.bumped == 'true'
     runs-on: ubuntu-latest
     environment:
       name: pypi
