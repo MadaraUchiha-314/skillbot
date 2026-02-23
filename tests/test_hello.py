@@ -1,15 +1,7 @@
-"""Tests for the hello module."""
+"""Tests for the skillbot package."""
 
-from skillbot.hello import hello
-
-
-def test_hello_default() -> None:
-    assert hello() == "Hello, World!"
+import skillbot
 
 
-def test_hello_with_name() -> None:
-    assert hello("Skillbot") == "Hello, Skillbot!"
-
-
-def test_hello_empty_string() -> None:
-    assert hello("") == "Hello, !"
+def test_version() -> None:
+    assert skillbot.__version__ == "0.2.0"

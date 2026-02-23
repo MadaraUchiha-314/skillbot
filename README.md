@@ -1,6 +1,6 @@
 # skillbot
 
-A bot which uses skills to do work.
+An agentic bot powered by skills. Skillbot uses an LLM as its brain and [Agent Skills](https://agentskills.io/) as extensible capabilities, communicating via the [A2A protocol](https://a2a-protocol.org/).
 
 ## Tech Stack
 
@@ -16,6 +16,24 @@ A bot which uses skills to do work.
 | Git Hooks           | [pre-commit](https://pre-commit.com/)                               |
 | CI/CD               | [GitHub Actions](https://github.com/features/actions)                |
 | Package Registry    | [PyPI](https://pypi.org/project/skillbot/)                           |
+| Agent Framework     | [LangGraph](https://langchain-ai.github.io/langgraph/)              |
+| LLM Provider        | [LangChain OpenAI](https://python.langchain.com/docs/integrations/chat/openai/) |
+| Agent Protocol      | [A2A SDK](https://a2a-protocol.org/)                                 |
+| Web Framework       | [FastAPI](https://fastapi.tiangolo.com/)                             |
+| CLI                 | [Click](https://click.palletsprojects.com/)                          |
+
+## Architecture
+
+Skillbot follows a structured agent loop:
+
+```
+START -> Find Relevant Skills -> Load Skills -> Load Memories
+      -> Plan & Execute -> Reflect -> [Complete?]
+          -> Yes: Create Memories -> END
+          -> No:  Summarize -> loop back to Find Skills
+```
+
+The loop is implemented as a [LangGraph](https://langchain-ai.github.io/langgraph/) `StateGraph` with persistent checkpointing via SQLite.
 
 ## Local Development
 
@@ -97,15 +115,66 @@ docs: update README with setup instructions
 
 ```
 skillbot/
-├── skillbot/           # Package source code
-│   ├── __init__.py
-│   └── hello.py
-├── tests/              # Test suite
-│   └── test_hello.py
-├── docs/               # Documentation
-├── .github/workflows/  # CI/CD pipelines
-│   ├── pr.yml          # Runs on pull requests
-│   └── release.yml     # Runs on merge to main
-├── pyproject.toml      # Project & tool configuration
+├── skillbot/
+│   ├── agents/             # Agent implementations
+│   │   ├── prompts/        # Prompt templates (.prompt.md)
+│   │   └── supervisor.py   # Default supervisor agent
+│   ├── cli/
+│   │   └── cli.py          # CLI commands (init, start, chat)
+│   ├── config/
+│   │   └── config.py       # Config loading & dataclasses
+│   ├── framework/
+│   │   ├── agent.py        # AgentFramework (LangGraph graph)
+│   │   └── state.py        # AgentState TypedDict
+│   ├── memory/
+│   │   └── memory.py       # User memory read/write
+│   ├── server/
+│   │   └── a2a_server.py   # A2A protocol server (FastAPI)
+│   ├── skills/
+│   │   └── loader.py       # Skill discovery & loading
+│   └── tools/              # Tool infrastructure
+├── tests/                  # Test suite
+├── docs/                   # Documentation
+├── .github/workflows/      # CI/CD pipelines
+│   ├── pr.yml
+│   └── release.yml
+├── pyproject.toml
 └── .pre-commit-config.yaml
 ```
+
+### Running the CLI Locally
+
+During development, use `uv run` to invoke the CLI. This uses the editable install from `.venv` so your local code changes are reflected immediately without reinstalling.
+
+```bash
+# Show available commands
+uv run skillbot --help
+
+# Initialize config in a local directory (avoids writing to ~/.skillbot)
+uv run skillbot init --root-dir ./local-config
+
+# Edit ./local-config/skillbot.config.json to add your OpenAI API key
+
+# Start the agent server
+uv run skillbot start --config ./local-config/skillbot.config.json
+
+# In another terminal, start chatting
+uv run skillbot chat --user-id my-user --config ./local-config/skillbot.config.json
+```
+
+If you prefer, you can also activate the virtualenv and run `skillbot` directly:
+
+```bash
+source .venv/bin/activate
+skillbot --help
+```
+
+### Hot-Reload (Development)
+
+Use the `--reload` flag to automatically restart the server whenever you change code under `skillbot/`. This is the recommended way to run during development:
+
+```bash
+uv run skillbot start --config ./local-config/skillbot.config.json --reload
+```
+
+The server watches the `skillbot/` directory for file changes and restarts automatically, so you don't need to manually stop and restart after each edit.
