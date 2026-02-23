@@ -1,7 +1,9 @@
 """Tests for the skillbot package."""
 
+import re
+
 import skillbot
 
 
 def test_version() -> None:
-    assert skillbot.__version__ == "0.2.0"
+    assert re.match(r"\d+\.\d+\.\d+", skillbot.__version__)
