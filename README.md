@@ -121,10 +121,10 @@ skillbot/
 │   │   └── supervisor.py   # Default supervisor agent
 │   ├── channels/           # Communication channels
 │   │   ├── chat.py         # Shared A2A chat primitives
-│   │   ├── cli/
-│   │   │   └── cli.py      # CLI commands (init, start, chat)
 │   │   └── streamlit/
 │   │       └── app.py      # Streamlit web chat interface
+│   ├── cli/
+│   │   └── cli.py          # CLI commands (init, start, chat)
 │   ├── config/
 │   │   └── config.py       # Config loading & dataclasses
 │   ├── framework/

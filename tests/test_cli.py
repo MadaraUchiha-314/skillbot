@@ -5,7 +5,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from skillbot.channels.cli.cli import cli
+from skillbot.cli.cli import cli
 
 
 def test_cli_help() -> None:

@@ -70,7 +70,7 @@ def init(root_dir: Path | None) -> None:
     agent_config_path.write_text(json.dumps(agent_config, indent=4))
     click.echo(f"Created agent config: {agent_config_path}")
 
-    prompts_src = Path(__file__).parent.parent.parent / "agents" / "prompts"
+    prompts_src = Path(__file__).parent.parent / "agents" / "prompts"
     if prompts_src.is_dir():
         for prompt_file in prompts_src.glob("*.prompt.md"):
             dest = supervisor_dir / prompt_file.name
@@ -231,7 +231,7 @@ def _launch_streamlit(user_id: str, port: int) -> None:
     """Launch the Streamlit chat interface as a subprocess."""
     import subprocess
 
-    app_path = Path(__file__).parent.parent / "streamlit" / "app.py"
+    app_path = Path(__file__).parent.parent / "channels" / "streamlit" / "app.py"
     cmd = [
         sys.executable,
         "-m",
@@ -255,7 +255,11 @@ def _launch_streamlit(user_id: str, port: int) -> None:
 
 async def _chat_loop(user_id: str, port: int) -> None:
     """Interactive chat loop using the A2A client."""
-    from skillbot.channels.chat import create_a2a_client, send_chat_message
+    from skillbot.channels.chat import (
+        create_a2a_client,
+        extract_response_text,
+        send_chat_message,
+    )
 
     base_url = f"http://localhost:{port}"
 
@@ -289,19 +293,22 @@ async def _chat_loop(user_id: str, port: int) -> None:
 
             try:
                 request_id += 1
-                chat_response = await send_chat_message(
+                response = await send_chat_message(
                     client=client,
                     user_input=user_input,
                     user_id=user_id,
                     context_id=context_id,
                     request_id=request_id,
                 )
-                context_id = chat_response.context_id
 
-                if chat_response.error:
-                    click.echo(chat_response.text, err=True)
-                else:
-                    click.echo(f"Agent> {chat_response.text}")
+                result = response.root
+                if hasattr(result, "result"):
+                    task_or_msg = result.result
+                    if hasattr(task_or_msg, "context_id"):
+                        context_id = task_or_msg.context_id
+                    click.echo(f"Agent> {extract_response_text(task_or_msg)}")
+                elif hasattr(result, "error"):
+                    click.echo(f"Error: {result.error.message}", err=True)
 
             except Exception as e:
                 click.echo(f"Error: {e}", err=True)

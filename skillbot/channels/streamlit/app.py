@@ -14,7 +14,12 @@ from typing import Any
 
 import streamlit as st
 
-from skillbot.channels.chat import create_a2a_client, send_chat_message
+from skillbot.channels.chat import (
+    create_a2a_client,
+    extract_artifacts,
+    extract_response_text,
+    send_chat_message,
+)
 
 DEFAULT_PORT = 7744
 
@@ -41,18 +46,29 @@ async def _send_message(
     httpx_client, client = await create_a2a_client(base_url)
 
     try:
-        chat_response = await send_chat_message(
+        response = await send_chat_message(
             client=client,
             user_input=user_input,
             user_id=user_id,
             context_id=context_id,
             request_id=request_id,
         )
-        return (
-            chat_response.text,
-            chat_response.context_id,
-            chat_response.agent_messages,
-        )
+
+        result = response.root
+        new_context_id = context_id
+        response_text = "(no response)"
+        agent_messages: list[dict[str, Any]] = []
+
+        if hasattr(result, "result"):
+            task_or_msg = result.result
+            if hasattr(task_or_msg, "context_id"):
+                new_context_id = task_or_msg.context_id
+            response_text = extract_response_text(task_or_msg)
+            agent_messages = extract_artifacts(task_or_msg)
+        elif hasattr(result, "error"):
+            response_text = f"Error: {result.error.message}"
+
+        return response_text, new_context_id, agent_messages
     finally:
         await httpx_client.aclose()
 

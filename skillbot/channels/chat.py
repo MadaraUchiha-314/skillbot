@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import json
-from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
@@ -15,18 +14,9 @@ from a2a.types import (
     Part,
     Role,
     SendMessageRequest,
+    SendMessageResponse,
     TextPart,
 )
-
-
-@dataclass
-class ChatResponse:
-    """Structured response from an A2A chat exchange."""
-
-    text: str
-    context_id: str | None
-    agent_messages: list[dict[str, Any]] = field(default_factory=list)
-    error: bool = False
 
 
 def extract_response_text(response: object) -> str:
@@ -100,8 +90,8 @@ async def send_chat_message(
     user_id: str,
     context_id: str | None,
     request_id: int,
-) -> ChatResponse:
-    """Send a user message via the A2A client and return a structured response."""
+) -> SendMessageResponse:
+    """Send a user message via the A2A client and return the raw A2A response."""
     message = Message(
         role=Role.user,
         parts=[Part(root=TextPart(text=user_input))],
@@ -115,26 +105,4 @@ async def send_chat_message(
         metadata={"user_id": user_id},
     )
     request = SendMessageRequest(id=request_id, params=params)
-    response = await client.send_message(request)
-
-    result = response.root
-    new_context_id = context_id
-
-    if hasattr(result, "result"):
-        task_or_msg = result.result
-        if hasattr(task_or_msg, "context_id"):
-            new_context_id = task_or_msg.context_id
-        return ChatResponse(
-            text=extract_response_text(task_or_msg),
-            context_id=new_context_id,
-            agent_messages=extract_artifacts(task_or_msg),
-        )
-
-    if hasattr(result, "error"):
-        return ChatResponse(
-            text=f"Error: {result.error.message}",
-            context_id=new_context_id,
-            error=True,
-        )
-
-    return ChatResponse(text="(no response)", context_id=new_context_id)
+    return await client.send_message(request)
