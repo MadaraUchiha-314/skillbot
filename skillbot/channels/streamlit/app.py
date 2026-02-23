@@ -1,7 +1,7 @@
 """Streamlit chat interface for Skillbot.
 
 Can be run independently:
-    streamlit run skillbot/streamlit/app.py -- --port 7744
+    streamlit run skillbot/channels/streamlit/app.py -- --port 7744
 
 Or via the CLI:
     skillbot chat --user-id <id> --interface streamlit
@@ -10,21 +10,11 @@ Or via the CLI:
 from __future__ import annotations
 
 import asyncio
-import contextlib
-import json
 from typing import Any
 
-import httpx
 import streamlit as st
-from a2a.client import A2ACardResolver, A2AClient
-from a2a.types import (
-    Message,
-    MessageSendParams,
-    Part,
-    Role,
-    SendMessageRequest,
-    TextPart,
-)
+
+from skillbot.channels.chat import create_a2a_client, send_chat_message
 
 DEFAULT_PORT = 7744
 
@@ -39,42 +29,6 @@ def _get_port() -> int:
     return DEFAULT_PORT
 
 
-def _extract_response_text(response: Any) -> str:
-    """Extract text from an A2A response object."""
-    if hasattr(response, "status") and hasattr(response.status, "message"):
-        msg = response.status.message
-        if msg and hasattr(msg, "parts"):
-            for part in msg.parts:
-                root = part.root if hasattr(part, "root") else part
-                if hasattr(root, "text"):
-                    return str(root.text)
-
-    if hasattr(response, "parts"):
-        for part in response.parts:
-            root = part.root if hasattr(part, "root") else part
-            if hasattr(root, "text"):
-                return str(root.text)
-
-    return "(no text response)"
-
-
-def _extract_artifacts(response: Any) -> list[dict[str, Any]]:
-    """Extract agent-state-messages artifacts from an A2A Task response."""
-    artifacts: list[dict[str, Any]] = []
-    if not hasattr(response, "artifacts") or not response.artifacts:
-        return artifacts
-    for artifact in response.artifacts:
-        meta = getattr(artifact, "metadata", None) or {}
-        if meta.get("type") != "agent-state-messages":
-            continue
-        for part in artifact.parts:
-            root = part.root if hasattr(part, "root") else part
-            if hasattr(root, "text"):
-                with contextlib.suppress(json.JSONDecodeError, TypeError):
-                    artifacts = json.loads(root.text)
-    return artifacts
-
-
 async def _send_message(
     user_input: str,
     user_id: str,
@@ -84,49 +38,23 @@ async def _send_message(
 ) -> tuple[str, str | None, list[dict[str, Any]]]:
     """Send a message and return (text, context_id, agent_messages)."""
     base_url = f"http://localhost:{port}"
+    httpx_client, client = await create_a2a_client(base_url)
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as httpx_client:
-        card_resolver = A2ACardResolver(
-            httpx_client=httpx_client,
-            base_url=base_url,
+    try:
+        chat_response = await send_chat_message(
+            client=client,
+            user_input=user_input,
+            user_id=user_id,
+            context_id=context_id,
+            request_id=request_id,
         )
-        card = await card_resolver.get_agent_card()
-        client = A2AClient(
-            httpx_client=httpx_client,
-            agent_card=card,
+        return (
+            chat_response.text,
+            chat_response.context_id,
+            chat_response.agent_messages,
         )
-
-        message = Message(
-            role=Role.user,
-            parts=[Part(root=TextPart(text=user_input))],
-            message_id="",
-        )
-        if context_id:
-            message.context_id = context_id
-
-        params = MessageSendParams(
-            message=message,
-            metadata={"user_id": user_id},
-        )
-
-        request = SendMessageRequest(id=request_id, params=params)
-        response = await client.send_message(request)
-
-        result = response.root
-        new_context_id = context_id
-        response_text = "(no response)"
-        agent_messages: list[dict[str, Any]] = []
-
-        if hasattr(result, "result"):
-            task_or_msg = result.result
-            if hasattr(task_or_msg, "context_id"):
-                new_context_id = task_or_msg.context_id
-            response_text = _extract_response_text(task_or_msg)
-            agent_messages = _extract_artifacts(task_or_msg)
-        elif hasattr(result, "error"):
-            response_text = f"Error: {result.error.message}"
-
-        return response_text, new_context_id, agent_messages
+    finally:
+        await httpx_client.aclose()
 
 
 _ROLE_LABELS = {

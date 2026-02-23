@@ -70,7 +70,7 @@ def init(root_dir: Path | None) -> None:
     agent_config_path.write_text(json.dumps(agent_config, indent=4))
     click.echo(f"Created agent config: {agent_config_path}")
 
-    prompts_src = Path(__file__).parent.parent / "agents" / "prompts"
+    prompts_src = Path(__file__).parent.parent.parent / "agents" / "prompts"
     if prompts_src.is_dir():
         for prompt_file in prompts_src.glob("*.prompt.md"):
             dest = supervisor_dir / prompt_file.name
@@ -255,33 +255,24 @@ def _launch_streamlit(user_id: str, port: int) -> None:
 
 async def _chat_loop(user_id: str, port: int) -> None:
     """Interactive chat loop using the A2A client."""
-    import httpx
-    from a2a.client import A2ACardResolver, A2AClient
+    from skillbot.channels.chat import create_a2a_client, send_chat_message
 
     base_url = f"http://localhost:{port}"
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as httpx_client:
-        try:
-            card_resolver = A2ACardResolver(
-                httpx_client=httpx_client,
-                base_url=base_url,
-            )
-            card = await card_resolver.get_agent_card()
-            client = A2AClient(
-                httpx_client=httpx_client,
-                agent_card=card,
-            )
-        except Exception as e:
-            click.echo(f"Error connecting to supervisor: {e}", err=True)
-            click.echo(
-                "Make sure 'skillbot start' is running in another terminal.",
-                err=True,
-            )
-            return
+    try:
+        httpx_client, client = await create_a2a_client(base_url)
+    except Exception as e:
+        click.echo(f"Error connecting to supervisor: {e}", err=True)
+        click.echo(
+            "Make sure 'skillbot start' is running in another terminal.",
+            err=True,
+        )
+        return
 
-        context_id: str | None = None
-        request_id = 0
+    context_id: str | None = None
+    request_id = 0
 
+    try:
         while True:
             try:
                 user_input = click.prompt("You", prompt_suffix="> ")
@@ -297,75 +288,23 @@ async def _chat_loop(user_id: str, port: int) -> None:
                 continue
 
             try:
-                from a2a.types import (
-                    Message,
-                    MessageSendParams,
-                    Part,
-                    Role,
-                    SendMessageRequest,
-                    TextPart,
-                )
-
-                message = Message(
-                    role=Role.user,
-                    parts=[Part(root=TextPart(text=user_input))],
-                    message_id="",
-                )
-                if context_id:
-                    message.context_id = context_id
-
-                params = MessageSendParams(
-                    message=message,
-                    metadata={"user_id": user_id},
-                )
-
                 request_id += 1
-                request = SendMessageRequest(
-                    id=request_id,
-                    params=params,
+                chat_response = await send_chat_message(
+                    client=client,
+                    user_input=user_input,
+                    user_id=user_id,
+                    context_id=context_id,
+                    request_id=request_id,
                 )
+                context_id = chat_response.context_id
 
-                response = await client.send_message(request)
-
-                result = response.root
-                if hasattr(result, "result"):
-                    task_or_msg = result.result
-                    if hasattr(task_or_msg, "context_id"):
-                        context_id = task_or_msg.context_id
-                    _display_response(task_or_msg)
-                elif hasattr(result, "error"):
-                    click.echo(f"Error: {result.error.message}", err=True)
+                if chat_response.error:
+                    click.echo(chat_response.text, err=True)
+                else:
+                    click.echo(f"Agent> {chat_response.text}")
 
             except Exception as e:
                 click.echo(f"Error: {e}", err=True)
                 logger.exception("Chat error")
-
-
-def _display_response(response: object) -> None:
-    """Display an A2A response to the user."""
-    if hasattr(response, "status") and hasattr(response.status, "message"):
-        msg = response.status.message
-        if msg and hasattr(msg, "parts"):
-            for part in msg.parts:
-                root = part.root if hasattr(part, "root") else part
-                if hasattr(root, "text"):
-                    click.echo(f"Agent> {root.text}")
-                    return
-
-    if hasattr(response, "parts"):
-        for part in response.parts:
-            root = part.root if hasattr(part, "root") else part
-            if hasattr(root, "text"):
-                click.echo(f"Agent> {root.text}")
-                return
-
-    if hasattr(response, "artifacts"):
-        artifacts = response.artifacts or []
-        for artifact in artifacts:
-            for part in artifact.parts:
-                root = part.root if hasattr(part, "root") else part
-                if hasattr(root, "text"):
-                    click.echo(f"Agent> {root.text}")
-                    return
-
-    click.echo("Agent> (no text response)")
+    finally:
+        await httpx_client.aclose()

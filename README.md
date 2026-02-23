@@ -119,8 +119,12 @@ skillbot/
 │   ├── agents/             # Agent implementations
 │   │   ├── prompts/        # Prompt templates (.prompt.md)
 │   │   └── supervisor.py   # Default supervisor agent
-│   ├── cli/
-│   │   └── cli.py          # CLI commands (init, start, chat)
+│   ├── channels/           # Communication channels
+│   │   ├── chat.py         # Shared A2A chat primitives
+│   │   ├── cli/
+│   │   │   └── cli.py      # CLI commands (init, start, chat)
+│   │   └── streamlit/
+│   │       └── app.py      # Streamlit web chat interface
 │   ├── config/
 │   │   └── config.py       # Config loading & dataclasses
 │   ├── framework/
@@ -158,8 +162,17 @@ uv run skillbot init --root-dir ./local-config
 # Start the agent server
 uv run skillbot start --config ./local-config/skillbot.config.json
 
-# In another terminal, start chatting
+# In another terminal, start chatting (text interface)
 uv run skillbot chat --user-id my-user --config ./local-config/skillbot.config.json
+
+# Or use the Streamlit web interface instead
+uv run skillbot chat --user-id my-user --config ./local-config/skillbot.config.json --interface streamlit
+```
+
+The `--interface streamlit` flag launches a browser-based chat UI where you can set the User ID and supervisor port from the sidebar. You can also run the Streamlit app directly:
+
+```bash
+uv run streamlit run skillbot/channels/streamlit/app.py -- --port 7744
 ```
 
 If you prefer, you can also activate the virtualenv and run `skillbot` directly:
