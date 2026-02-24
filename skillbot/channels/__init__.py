@@ -1,1 +1,1 @@
-"""Communication channels for Skillbot (CLI, Streamlit, etc.)."""
+"""Communication channels for Skillbot (CLI, etc.)."""

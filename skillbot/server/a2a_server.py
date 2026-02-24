@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING
 from a2a.server.apps import A2AFastAPIApplication
 from a2a.server.events import InMemoryQueueManager
 from a2a.server.request_handlers import DefaultRequestHandler
-from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
+
+from skillbot.server.sqlite_task_store import SqliteTaskStore
 
 if TYPE_CHECKING:
     from a2a.server.agent_execution import AgentExecutor
@@ -53,13 +54,15 @@ def create_a2a_app(
     name: str,
     port: int,
     description: str = "",
+    root_dir: Path | None = None,
 ) -> FastAPI:
     """Create a FastAPI application with A2A protocol routes.
 
     Returns a FastAPI app ready to be served with uvicorn.
     """
     agent_card = create_agent_card(name, port, description)
-    task_store = InMemoryTaskStore()
+    db_path = (root_dir or Path.cwd()) / "checkpoints" / "tasks.db"
+    task_store = SqliteTaskStore(db_path)
     queue_manager = InMemoryQueueManager()
 
     request_handler = DefaultRequestHandler(
@@ -101,4 +104,5 @@ def create_app() -> FastAPI:
         agent_executor=executor,
         name=first_name,
         port=first_svc.port,
+        root_dir=skillbot_config.root_dir,
     )

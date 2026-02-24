@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
+import traceback
+import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +17,9 @@ from a2a.types import Part, TaskState, TextPart
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 
 from skillbot.config.config import AgentConfig, SkillbotConfig, load_agent_config
+from skillbot.errors import ErrorCode, SkillbotError
 from skillbot.framework.agent import AgentFramework
+from skillbot.strings import get as s
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +47,9 @@ class SupervisorExecutor(AgentExecutor):  # type: ignore[misc]
         return self._graph
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        task_id = context.task_id or ""
+        task_id = context.task_id or str(uuid.uuid4())
+        if not context.task_id:
+            logger.warning("Request had no task_id; generated %s", task_id)
         context_id = context.context_id or ""
         updater = TaskUpdater(event_queue, task_id, context_id)
 
@@ -61,6 +68,7 @@ class SupervisorExecutor(AgentExecutor):  # type: ignore[misc]
             initial_state: dict[str, Any] = {
                 "messages": [{"role": "user", "content": user_input}],
                 "task_description": user_input,
+                "task_id": task_id,
                 "user_id": user_id,
                 "workspace_path": workspace_path,
                 "available_skills": [],
@@ -87,16 +95,33 @@ class SupervisorExecutor(AgentExecutor):  # type: ignore[misc]
             )
             await updater.complete(message=msg)
 
-        except Exception:
+        except Exception as exc:
             logger.exception("Supervisor execution failed")
+            code = ErrorCode.AGENT_EXECUTION_FAILED
+            if isinstance(exc, SkillbotError):
+                code = exc.code
+
+            # Write error traceback to log file
+            log_dir = self.skillbot_config.root_dir / "checkpoints" / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+            safe_task_id = task_id or "unknown"
+            log_filename = f"{safe_task_id}-{ts}.txt"
+            log_path = log_dir / log_filename
+            log_written = False
+            try:
+                with log_path.open("w") as f:
+                    f.write(f"Task: {task_id}\nContext: {context_id}\n\n")
+                    f.write(traceback.format_exc())
+                log_written = True
+            except OSError as e:
+                logger.warning("Could not write error log to %s: %s", log_path, e)
+
+            error_text = s("supervisor.error_message", code=code.value)
+            if log_written:
+                error_text += f"\n\nFull traceback saved to: {log_path}"
             error_msg = updater.new_agent_message(
-                parts=[
-                    Part(
-                        root=TextPart(
-                            text="An error occurred while processing your request."
-                        )
-                    )
-                ]
+                parts=[Part(root=TextPart(text=error_text))]
             )
             await updater.update_status(TaskState.failed, message=error_msg, final=True)
 
@@ -105,7 +130,7 @@ class SupervisorExecutor(AgentExecutor):  # type: ignore[misc]
         context_id = context.context_id or ""
         updater = TaskUpdater(event_queue, task_id, context_id)
         msg = updater.new_agent_message(
-            parts=[Part(root=TextPart(text="Task cancelled."))]
+            parts=[Part(root=TextPart(text=s("supervisor.task_cancelled")))]
         )
         await updater.cancel(message=msg)
 

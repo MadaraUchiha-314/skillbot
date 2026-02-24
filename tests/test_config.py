@@ -15,6 +15,7 @@ from skillbot.config.config import (
     load_agent_config,
     load_skillbot_config,
 )
+from skillbot.errors import SkillbotError
 
 
 def test_generate_default_skillbot_config() -> None:
@@ -47,7 +48,7 @@ def test_load_skillbot_config(tmp_path: Path) -> None:
 
 
 def test_load_skillbot_config_missing() -> None:
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(SkillbotError):
         load_skillbot_config(Path("/nonexistent/config.json"))
 
 
@@ -64,7 +65,7 @@ def test_load_agent_config(tmp_path: Path) -> None:
 
 
 def test_load_agent_config_missing() -> None:
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(SkillbotError):
         load_agent_config(Path("/nonexistent/agent-config.json"))
 
 

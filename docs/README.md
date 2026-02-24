@@ -37,21 +37,19 @@ Edit `~/.skillbot/skillbot.config.json` to add your model provider API key:
 }
 ```
 
-### 3. Start the Server
+### 3. Start
 
 ```bash
-skillbot start
+skillbot start --user-id alice
 ```
 
-This starts the supervisor agent as an A2A server on `http://localhost:7744`.
+This starts the supervisor agent server in the background and opens an interactive chat session.
 
-### 4. Chat
+To start the server without the chat interface:
 
 ```bash
-skillbot chat --user-id alice
+skillbot start --background
 ```
-
-This opens an interactive text-based chat session with the supervisor agent.
 
 ## CLI Reference
 
@@ -65,21 +63,15 @@ Initialize Skillbot configuration.
 
 ### `skillbot start`
 
-Start Skillbot agent services.
+Start the agent server and open the chat interface.
 
 | Option | Description | Default |
 | --- | --- | --- |
-| `--config PATH` | Path to `skillbot.config.json` | `~/.skillbot/skillbot.config.json` |
-
-### `skillbot chat`
-
-Start an interactive chat session.
-
-| Option | Description | Default |
-| --- | --- | --- |
-| `--user-id TEXT` | **Required.** User ID for the session | -- |
+| `--user-id TEXT` | User ID for the session (required unless `--background`) | -- |
 | `--config PATH` | Path to `skillbot.config.json` | `~/.skillbot/skillbot.config.json` |
 | `--port INT` | Port of the supervisor agent | `7744` |
+| `--background` | Start server only, no chat interface | `false` |
+| `--reload` | Enable hot-reload for development | `false` |
 
 ## Configuration
 

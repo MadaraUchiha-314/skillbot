@@ -7,6 +7,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from skillbot.errors import ErrorCode, SkillbotError
+from skillbot.strings import get as s
+
 DEFAULT_ROOT_DIR = Path.home() / ".skillbot"
 DEFAULT_CONFIG_FILENAME = "skillbot.config.json"
 DEFAULT_SUPERVISOR_PORT = 7744
@@ -76,9 +79,9 @@ def load_skillbot_config(config_path: Path | None = None) -> SkillbotConfig:
         config_path = DEFAULT_ROOT_DIR / DEFAULT_CONFIG_FILENAME
 
     if not config_path.exists():
-        raise FileNotFoundError(
-            f"Skillbot config not found at {config_path}. "
-            "Run 'skillbot init' to create one."
+        raise SkillbotError(
+            ErrorCode.CONFIG_NOT_FOUND,
+            s("config.not_found", path=config_path),
         )
 
     raw = json.loads(config_path.read_text())
@@ -113,7 +116,10 @@ def load_skillbot_config(config_path: Path | None = None) -> SkillbotConfig:
 def load_agent_config(config_path: Path) -> AgentConfig:
     """Load and parse an agent-config.json file."""
     if not config_path.exists():
-        raise FileNotFoundError(f"Agent config not found at {config_path}")
+        raise SkillbotError(
+            ErrorCode.AGENT_CONFIG_NOT_FOUND,
+            s("config.agent_not_found", path=config_path),
+        )
 
     raw = json.loads(config_path.read_text())
     config_dir = config_path.parent
