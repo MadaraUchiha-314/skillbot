@@ -50,6 +50,52 @@ graph TD
     EXEC -- "stdout / stderr" --> CMGR
 ```
 
+## Container Lifecycle
+
+A **single container** is created per user and reused for the entire agent lifecycle. Scripts are never executed by spawning new containers — instead, `podman exec` sends commands into the already-running container.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Removed: Agent not started
+
+    state "SupervisorExecutor.__init__()" as Init {
+        Removed --> Stopping: ensure_running() called
+        Stopping --> Creating: podman rm -f (clean slate)
+
+        state "Container Setup" as Creating {
+            [*] --> PodmanRun: podman run -d ... sleep infinity
+            PodmanRun --> InstallPip: pip install (all skills' deps)
+            InstallPip --> InstallNpm: npm install -g (all skills' deps)
+            InstallNpm --> [*]
+        }
+    }
+
+    Creating --> Running: Container ready
+
+    state "Running (sleep infinity)" as Running {
+        [*] --> Idle
+        Idle --> Executing: podman exec (skill script)
+        Executing --> Idle: stdout/stderr returned (60s timeout)
+
+        note right of Idle
+            One long-lived container handles
+            ALL script executions across
+            multiple user requests and
+            agent loop iterations.
+        end note
+    }
+
+    Running --> Removed: Agent process exits / next ensure_running()
+    Removed --> [*]
+```
+
+**Key points:**
+- `ensure_running()` is called **once** during `SupervisorExecutor.__init__()`, not per script.
+- The MVP always recreates the container on init (`stop → remove → create`) to avoid config drift (e.g. a skill with network access added after container was created without it).
+- The container runs `sleep infinity` as its entrypoint — it stays alive and idle between script executions.
+- Each `exec_script()` call runs `podman exec` against the existing container, not `podman run`.
+- All skill dependencies (pip + npm) from **all** configured skills are installed at container startup, not on-demand.
+
 ## Request Flow
 
 ```mermaid
