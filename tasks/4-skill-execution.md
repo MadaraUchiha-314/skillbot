@@ -1,0 +1,5 @@
+- Currently skill execution happens in the host machine
+- The makes the bot vulnerable. We want to execute all the actions inside podman container
+- Design an architecture on how we can securely execute skillbot inside containers
+- Design how the user can given permission to ONLY what is required by the bot.
+- Since the workspace for the bot is already determined, the container should only have access to that folder of the filesystem

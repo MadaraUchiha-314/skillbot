@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import BaseTool
@@ -22,6 +22,9 @@ from skillbot.skills.loader import (
     load_skill,
     load_skill_scripts,
 )
+
+if TYPE_CHECKING:
+    from skillbot.container.manager import ContainerManager
 
 logger = logging.getLogger(__name__)
 
@@ -104,10 +107,12 @@ class AgentFramework:
         self,
         agent_config: AgentConfig,
         skillbot_config: SkillbotConfig,
+        container_manager: ContainerManager,
     ) -> None:
         self.agent_config = agent_config
         self.skillbot_config = skillbot_config
         self.model_providers = skillbot_config.model_providers
+        self.container_manager = container_manager
 
         skill_dirs = self._resolve_skill_directories()
         self.all_skills: list[SkillMetadata] = discover_skills(skill_dirs)
@@ -482,5 +487,5 @@ class AgentFramework:
         for name in selected_names:
             skill = skills_by_name.get(name)
             if skill:
-                tools.extend(load_skill_scripts(skill))
+                tools.extend(load_skill_scripts(skill, self.container_manager))
         return tools

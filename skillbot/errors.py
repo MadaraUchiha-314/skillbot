@@ -21,6 +21,7 @@ class ErrorCode(StrEnum):
     CONFIG_INVALID = "E1002"
     AGENT_CONFIG_NOT_FOUND = "E1003"
     NO_SERVICES_CONFIGURED = "E1004"
+    CONTAINER_DISABLED = "E1005"
 
     SERVER_CONNECTION_FAILED = "E2001"
     SERVER_START_FAILED = "E2002"
@@ -42,6 +43,12 @@ ERROR_DESCRIPTIONS: dict[ErrorCode, str] = {
     ErrorCode.CONFIG_INVALID: "Skillbot configuration file is invalid.",
     ErrorCode.AGENT_CONFIG_NOT_FOUND: "Agent configuration file not found.",
     ErrorCode.NO_SERVICES_CONFIGURED: "No agent services are configured.",
+    ErrorCode.CONTAINER_DISABLED: (
+        "Container execution is required."
+        " Set container.enabled to true in skillbot.config.json"
+        " and pull the runtime image with:"
+        " podman pull ghcr.io/madarauchiha-314/skillbot-runtime:latest"
+    ),
     ErrorCode.SERVER_CONNECTION_FAILED: "Failed to connect to the agent server.",
     ErrorCode.SERVER_START_FAILED: "Agent server failed to start.",
     ErrorCode.SERVER_HEALTH_CHECK_FAILED: "Agent server health check failed.",

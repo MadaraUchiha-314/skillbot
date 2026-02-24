@@ -21,6 +21,56 @@ An agentic bot powered by skills. Skillbot uses an LLM as its brain and [Agent S
 | Agent Protocol      | [A2A SDK](https://a2a-protocol.org/)                                 |
 | Web Framework       | [FastAPI](https://fastapi.tiangolo.com/)                             |
 | CLI                 | [Click](https://click.palletsprojects.com/)                          |
+| Containerization    | [Podman](https://podman.io/)                                         |
+
+## Quick Start
+
+Install skillbot from PyPI and pull the pre-built runtime image from GitHub Container Registry. No need to clone this repo.
+
+### Prerequisites
+
+- Python >= 3.13
+- [Podman](https://podman.io/docs/installation)
+
+### 1. Install skillbot
+
+```bash
+pip install skillbot
+```
+
+### 2. Pull the runtime image
+
+```bash
+# macOS only: ensure the Podman machine is running
+podman machine start
+
+podman pull ghcr.io/madarauchiha-314/skillbot-runtime:latest
+```
+
+### 3. Initialize and configure
+
+```bash
+skillbot init
+```
+
+This creates `~/.skillbot/skillbot.config.json`. Edit it to add your OpenAI API key under `model-providers.openai.api-key`.
+
+The generated config points to the GHCR image by default:
+
+```json
+{
+  "container": {
+    "enabled": true,
+    "image": "ghcr.io/madarauchiha-314/skillbot-runtime:latest"
+  }
+}
+```
+
+### 4. Start skillbot
+
+```bash
+skillbot start --user-id my-user
+```
 
 ## Architecture
 
@@ -41,6 +91,7 @@ The loop is implemented as a [LangGraph](https://langchain-ai.github.io/langgrap
 
 - Python >= 3.13
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- [Podman](https://podman.io/docs/installation) (skill scripts run inside containers)
 
 ### Setup
 
@@ -133,6 +184,8 @@ skillbot/
 │   │   └── memory.py       # User memory read/write
 │   ├── server/
 │   │   └── a2a_server.py   # A2A protocol server (FastAPI)
+│   ├── container/
+│   │   └── manager.py      # Podman container management
 │   ├── skills/
 │   │   └── loader.py       # Skill discovery & loading
 │   └── tools/              # Tool infrastructure
@@ -141,6 +194,7 @@ skillbot/
 ├── .github/workflows/      # CI/CD pipelines
 │   ├── pr.yml
 │   └── release.yml
+├── Containerfile              # Base image for skill execution
 ├── pyproject.toml
 └── .pre-commit-config.yaml
 ```
@@ -149,15 +203,42 @@ skillbot/
 
 During development, use `uv run` to invoke the CLI. This uses the editable install from `.venv` so your local code changes are reflected immediately without reinstalling.
 
-```bash
-# Show available commands
-uv run skillbot --help
+#### 1. Initialize configuration
 
+```bash
 # Initialize config in a local directory (avoids writing to ~/.skillbot)
 uv run skillbot init --root-dir ./local-config
+```
 
-# Edit ./local-config/skillbot.config.json to add your OpenAI API key
+#### 2. Configure your API key
 
+Edit `./local-config/skillbot.config.json` and add your OpenAI API key under `model-providers.openai.api-key`.
+
+#### 3. Build the container image
+
+All skill scripts run inside Podman containers. For local development, build the image from the `Containerfile` instead of pulling from GHCR:
+
+```bash
+# Ensure the Podman machine is running (macOS only)
+podman machine start
+
+# Build the runtime image
+podman build -t skillbot-runtime:latest -f Containerfile .
+```
+
+Then use `--image` to point skillbot at your local build:
+
+```bash
+uv run skillbot start --user-id dev --image skillbot-runtime:latest --config ./local-config/skillbot.config.json
+```
+
+The `--image` flag overrides the GHCR image from the config file for that run. No config edits needed.
+
+Skillbot will refuse to start if `container.enabled` is set to `false`.
+
+#### 4. Start skillbot
+
+```bash
 # Start the server and open the chat interface
 uv run skillbot start --user-id my-user --config ./local-config/skillbot.config.json
 
@@ -181,3 +262,23 @@ uv run skillbot start --config ./local-config/skillbot.config.json --reload
 ```
 
 The server watches the `skillbot/` directory for file changes and restarts automatically, so you don't need to manually stop and restart after each edit.
+
+### Skill Permissions and Dependencies
+
+Skills can declare network access and dependencies in their `SKILL.md` frontmatter:
+
+```yaml
+---
+name: my-skill
+description: Does something useful
+permissions:
+  network: true      # allow network access inside the container
+dependencies:
+  pip:
+    - requests
+  npm:
+    - cheerio
+---
+```
+
+The container is created with `--network=none` by default. If any configured skill declares `permissions.network: true`, the container gets network access via `slirp4netns`. Dependencies from all configured skills are installed inside the container at startup.
