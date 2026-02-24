@@ -1,4 +1,4 @@
-"""Supervisor agent: the default agent instance using the AgentFramework."""
+"""Agent executor: the default agent instance using the AgentFramework."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from skillbot.strings import get as s
 logger = logging.getLogger(__name__)
 
 
-class SupervisorExecutor(AgentExecutor):  # type: ignore[misc]
+class SkillbotAgentExecutor(AgentExecutor):  # type: ignore[misc]
     """A2A AgentExecutor that delegates to the AgentFramework graph."""
 
     def __init__(
@@ -83,9 +83,7 @@ class SupervisorExecutor(AgentExecutor):  # type: ignore[misc]
 
     async def _ensure_graph(self) -> Any:
         if self._graph is None:
-            db_path = str(
-                self.skillbot_config.root_dir / "checkpoints" / "supervisor.db"
-            )
+            db_path = str(self.skillbot_config.root_dir / "checkpoints" / "default.db")
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
             self._graph = await self.framework.build_graph(db_path=db_path)
         return self._graph
@@ -140,7 +138,7 @@ class SupervisorExecutor(AgentExecutor):  # type: ignore[misc]
             await updater.complete(message=msg)
 
         except Exception as exc:
-            logger.exception("Supervisor execution failed")
+            logger.exception("Agent execution failed")
             code = ErrorCode.AGENT_EXECUTION_FAILED
             if isinstance(exc, SkillbotError):
                 code = exc.code
@@ -161,7 +159,7 @@ class SupervisorExecutor(AgentExecutor):  # type: ignore[misc]
             except OSError as e:
                 logger.warning("Could not write error log to %s: %s", log_path, e)
 
-            error_text = s("supervisor.error_message", code=code.value)
+            error_text = s("agent_executor.error_message", code=code.value)
             if log_written:
                 error_text += f"\n\nFull traceback saved to: {log_path}"
             error_msg = updater.new_agent_message(
@@ -174,7 +172,7 @@ class SupervisorExecutor(AgentExecutor):  # type: ignore[misc]
         context_id = context.context_id or ""
         updater = TaskUpdater(event_queue, task_id, context_id)
         msg = updater.new_agent_message(
-            parts=[Part(root=TextPart(text=s("supervisor.task_cancelled")))]
+            parts=[Part(root=TextPart(text=s("agent_executor.task_cancelled")))]
         )
         await updater.cancel(message=msg)
 
@@ -234,11 +232,11 @@ def _extract_final_response(result: dict[str, Any]) -> str:
     return "Task completed."
 
 
-def create_supervisor(
+def create_agent_executor(
     skillbot_config: SkillbotConfig,
     agent_config_path: Path,
     user_id: str = "default",
-) -> SupervisorExecutor:
-    """Factory function to create a SupervisorExecutor from config paths."""
+) -> SkillbotAgentExecutor:
+    """Factory function to create a SkillbotAgentExecutor from config paths."""
     agent_config = load_agent_config(agent_config_path)
-    return SupervisorExecutor(agent_config, skillbot_config, user_id=user_id)
+    return SkillbotAgentExecutor(agent_config, skillbot_config, user_id=user_id)

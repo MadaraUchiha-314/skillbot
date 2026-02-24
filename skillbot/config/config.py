@@ -12,7 +12,7 @@ from skillbot.strings import get as s
 
 DEFAULT_ROOT_DIR = Path.home() / ".skillbot"
 DEFAULT_CONFIG_FILENAME = "skillbot.config.json"
-DEFAULT_SUPERVISOR_PORT = 7744
+DEFAULT_AGENT_PORT = 7744
 
 
 @dataclass
@@ -45,7 +45,7 @@ class ContainerConfig:
 @dataclass
 class ServiceConfig:
     type: str = "agent"
-    port: int = DEFAULT_SUPERVISOR_PORT
+    port: int = DEFAULT_AGENT_PORT
     config: str = ""
 
 
@@ -57,6 +57,7 @@ class SkillbotConfig:
     services: dict[str, ServiceConfig] = field(default_factory=dict)
     model_providers: dict[str, ModelProviderConfig] = field(default_factory=dict)
     container: ContainerConfig = field(default_factory=ContainerConfig)
+    default_agent: str = "default"
     root_dir: Path = field(default_factory=lambda: DEFAULT_ROOT_DIR)
 
     def get_agent_services(self) -> dict[str, ServiceConfig]:
@@ -101,7 +102,7 @@ def load_skillbot_config(config_path: Path | None = None) -> SkillbotConfig:
             config_val = str((root_dir / config_val).resolve())
         services[name] = ServiceConfig(
             type=svc_raw.get("type", "agent"),
-            port=svc_raw.get("port", DEFAULT_SUPERVISOR_PORT),
+            port=svc_raw.get("port", DEFAULT_AGENT_PORT),
             config=config_val,
         )
 
@@ -130,6 +131,7 @@ def load_skillbot_config(config_path: Path | None = None) -> SkillbotConfig:
         services=services,
         model_providers=model_providers,
         container=container,
+        default_agent=raw.get("default-agent", "default"),
         root_dir=root_dir,
     )
 
@@ -176,11 +178,12 @@ def generate_default_skillbot_config(root_dir: Path) -> dict[str, Any]:
     """Generate the default skillbot.config.json content."""
     return {
         "type": "skillbot.config",
+        "default-agent": "default",
         "services": {
-            "supervisor": {
+            "default": {
                 "type": "agent",
-                "port": DEFAULT_SUPERVISOR_PORT,
-                "config": "supervisor/agent-config.json",
+                "port": DEFAULT_AGENT_PORT,
+                "config": "default/agent-config.json",
             }
         },
         "container": {

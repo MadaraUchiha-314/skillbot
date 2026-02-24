@@ -79,14 +79,14 @@
     "user_id_required": "--user-id is required (or use --background to start server only).",
     "run_init": "Run [bold]skillbot init[/bold] first.",
     "no_services": "No agent services configured.",
-    "cannot_connect": "Cannot connect to supervisor: {error}",
+    "cannot_connect": "Cannot connect to agent server: {error}",
     "reload_starting": "Starting {service} on http://localhost:{port} (reload enabled)",
     "foreground_starting": "Starting {service} on http://localhost:{port}",
     "pulling_image": "Pulling container image {image}…",
     "image_ready": "Container image ready",
     "image_pull_failed": "Failed to pull container image: {error}"
   },
-  "supervisor": {
+  "agent_executor": {
     "error_message": "[{code}] An error occurred while processing your request.",
     "task_cancelled": "Task cancelled."
   },

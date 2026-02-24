@@ -1337,7 +1337,7 @@ wheels = [
 
 [[package]]
 name = "skillbot"
-version = "0.4.0"
+version = "0.4.1"
 source = { editable = "." }
 dependencies = [
     { name = "a2a-sdk", extra = ["http-server"] },

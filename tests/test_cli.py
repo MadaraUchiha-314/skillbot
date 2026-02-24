@@ -30,9 +30,9 @@ def test_init_command(tmp_path: Path) -> None:
 
     config = json.loads(config_file.read_text())
     assert config["type"] == "skillbot.config"
-    assert "supervisor" in config["services"]
+    assert "default" in config["services"]
 
-    agent_config_file = root_dir / "supervisor" / "agent-config.json"
+    agent_config_file = root_dir / "default" / "agent-config.json"
     assert agent_config_file.exists()
 
     agent_config = json.loads(agent_config_file.read_text())
@@ -46,7 +46,7 @@ def test_init_creates_prompts(tmp_path: Path) -> None:
     result = runner.invoke(cli, ["init", "--root-dir", str(root_dir)])
     assert result.exit_code == 0
 
-    supervisor_dir = root_dir / "supervisor"
+    agent_dir = root_dir / "default"
     expected_prompts = [
         "find-skills.prompt.md",
         "plan.prompt.md",
@@ -55,7 +55,7 @@ def test_init_creates_prompts(tmp_path: Path) -> None:
         "summarize.prompt.md",
     ]
     for prompt_name in expected_prompts:
-        assert (supervisor_dir / prompt_name).exists(), f"Missing prompt: {prompt_name}"
+        assert (agent_dir / prompt_name).exists(), f"Missing prompt: {prompt_name}"
 
 
 def test_start_without_config() -> None:

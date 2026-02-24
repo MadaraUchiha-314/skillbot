@@ -36,9 +36,9 @@ from skillbot.cli.tui import (
     print_welcome,
 )
 from skillbot.config.config import (
+    DEFAULT_AGENT_PORT,
     DEFAULT_CONFIG_FILENAME,
     DEFAULT_ROOT_DIR,
-    DEFAULT_SUPERVISOR_PORT,
     generate_default_agent_config,
     generate_default_skillbot_config,
     load_skillbot_config,
@@ -90,10 +90,10 @@ def init(root_dir: Path | None) -> None:
     created = s("init.created_config", path=f"[bold]{config_path}[/bold]")
     console.print(f"  [success]✓[/success] {created}")
 
-    supervisor_dir = root / "supervisor"
-    supervisor_dir.mkdir(parents=True, exist_ok=True)
+    agent_dir = root / "default"
+    agent_dir.mkdir(parents=True, exist_ok=True)
 
-    agent_config_path = supervisor_dir / "agent-config.json"
+    agent_config_path = agent_dir / "agent-config.json"
     agent_config = generate_default_agent_config()
     agent_config_path.write_text(json.dumps(agent_config, indent=4))
     created_agent = s(
@@ -104,7 +104,7 @@ def init(root_dir: Path | None) -> None:
     prompts_src = Path(__file__).parent.parent / "agents" / "prompts"
     if prompts_src.is_dir():
         for prompt_file in prompts_src.glob("*.prompt.md"):
-            dest = supervisor_dir / prompt_file.name
+            dest = agent_dir / prompt_file.name
             shutil.copy2(prompt_file, dest)
             created_prompt = s("init.created_prompt", path=f"[bold]{dest}[/bold]")
             console.print(f"  [success]✓[/success] {created_prompt}")
@@ -132,7 +132,7 @@ def init(root_dir: Path | None) -> None:
     "--port",
     default=None,
     type=int,
-    help=f"Port of the supervisor agent. Default: {DEFAULT_SUPERVISOR_PORT}",
+    help=f"Port of the agent server. Default: {DEFAULT_AGENT_PORT}",
 )
 @click.option(
     "--background",
@@ -195,21 +195,25 @@ def start(
         print_error(s("cli.no_services"))
         sys.exit(1)
 
-    first_service_name = next(iter(agent_services))
-    first_service = agent_services[first_service_name]
-    supervisor_port = port or first_service.port
+    default_agent_name = skillbot_config.default_agent
+    if default_agent_name in agent_services:
+        service_name = default_agent_name
+    else:
+        service_name = next(iter(agent_services))
+    service = agent_services[service_name]
+    agent_port = port or service.port
 
     if reload:
-        _run_reload_mode(config_path, first_service_name, supervisor_port)
+        _run_reload_mode(config_path, service_name, agent_port)
         return
 
     if background:
         _run_foreground_server(
             skillbot_config,
             config_path,
-            first_service_name,
-            first_service,
-            supervisor_port,
+            service_name,
+            service,
+            agent_port,
         )
         return
 
@@ -219,12 +223,12 @@ def start(
     log_dir = root_dir / "logs"
 
     server = ServerProcess()
-    if not server.start(config_path, supervisor_port, log_dir):
+    if not server.start(config_path, agent_port, log_dir):
         sys.exit(1)
 
     try:
         asyncio.run(
-            _chat_loop(user_id, supervisor_port, workspace_path, server, config_path)  # type: ignore[arg-type]
+            _chat_loop(user_id, agent_port, workspace_path, server, config_path)  # type: ignore[arg-type]
         )
     finally:
         server.stop()
@@ -258,7 +262,7 @@ def _run_foreground_server(
     port: int,
 ) -> None:
     """Run the server in the foreground (--background mode)."""
-    from skillbot.agents.supervisor import create_supervisor
+    from skillbot.agents.agent_executor import create_agent_executor
     from skillbot.server.a2a_server import create_a2a_app
 
     svc_table = Table(show_header=False, box=None, padding=(0, 1))
@@ -276,7 +280,7 @@ def _run_foreground_server(
     )
     console.print()
 
-    executor = create_supervisor(skillbot_config, Path(service.config))
+    executor = create_agent_executor(skillbot_config, Path(service.config))
     app = create_a2a_app(
         agent_executor=executor,
         name=service_name,

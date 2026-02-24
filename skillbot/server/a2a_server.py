@@ -86,9 +86,9 @@ def create_app() -> FastAPI:
     """App factory for uvicorn --reload.
 
     Reads config from the SKILLBOT_CONFIG_PATH environment variable,
-    builds the supervisor executor and returns a fully wired FastAPI app.
+    builds the agent executor and returns a fully wired FastAPI app.
     """
-    from skillbot.agents.supervisor import create_supervisor
+    from skillbot.agents.agent_executor import create_agent_executor
     from skillbot.config.config import load_skillbot_config
 
     config_path_str = os.environ.get(SKILLBOT_CONFIG_PATH_ENV)
@@ -96,13 +96,17 @@ def create_app() -> FastAPI:
     skillbot_config = load_skillbot_config(config_path)
 
     agent_services = skillbot_config.get_agent_services()
-    first_name = next(iter(agent_services))
-    first_svc = agent_services[first_name]
+    default_agent_name = skillbot_config.default_agent
+    if default_agent_name in agent_services:
+        service_name = default_agent_name
+    else:
+        service_name = next(iter(agent_services))
+    service = agent_services[service_name]
 
-    executor = create_supervisor(skillbot_config, Path(first_svc.config))
+    executor = create_agent_executor(skillbot_config, Path(service.config))
     return create_a2a_app(
         agent_executor=executor,
-        name=first_name,
-        port=first_svc.port,
+        name=service_name,
+        port=service.port,
         root_dir=skillbot_config.root_dir,
     )
