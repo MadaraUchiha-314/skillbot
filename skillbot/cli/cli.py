@@ -1,4 +1,4 @@
-"""CLI for Skillbot: init, start, chat commands."""
+"""CLI for Skillbot: init and start commands."""
 
 from __future__ import annotations
 
@@ -8,10 +8,33 @@ import logging
 import shutil
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 import uvicorn
+from rich.panel import Panel
+from rich.table import Table
 
+from skillbot.cli.tui import (
+    ServerProcess,
+    console,
+    create_spinner_message,
+    get_user_input,
+    install_log_buffer,
+    print_agent_config,
+    print_agent_message,
+    print_banner,
+    print_error,
+    print_goodbye,
+    print_help,
+    print_info,
+    print_logs,
+    print_memories,
+    print_skills,
+    print_traces,
+    print_user_message,
+    print_welcome,
+)
 from skillbot.config.config import (
     DEFAULT_CONFIG_FILENAME,
     DEFAULT_ROOT_DIR,
@@ -20,6 +43,8 @@ from skillbot.config.config import (
     generate_default_skillbot_config,
     load_skillbot_config,
 )
+from skillbot.errors import ErrorCode, SkillbotError
+from skillbot.strings import get as s
 
 logger = logging.getLogger(__name__)
 
@@ -48,19 +73,22 @@ def cli(log_level: str) -> None:
 )
 def init(root_dir: Path | None) -> None:
     """Initialize Skillbot configuration."""
+    print_banner()
+
     root = root_dir or DEFAULT_ROOT_DIR
     root = root.resolve()
     root.mkdir(parents=True, exist_ok=True)
 
     config_path = root / DEFAULT_CONFIG_FILENAME
     if config_path.exists():
-        click.echo(f"Config already exists at {config_path}")
-        if not click.confirm("Overwrite?"):
+        console.print(f"[dim]{s('init.config_exists', path=config_path)}[/dim]")
+        if not click.confirm(s("init.overwrite")):
             return
 
     config = generate_default_skillbot_config(root)
     config_path.write_text(json.dumps(config, indent=4))
-    click.echo(f"Created config: {config_path}")
+    created = s("init.created_config", path=f"[bold]{config_path}[/bold]")
+    console.print(f"  [success]✓[/success] {created}")
 
     supervisor_dir = root / "supervisor"
     supervisor_dir.mkdir(parents=True, exist_ok=True)
@@ -68,112 +96,30 @@ def init(root_dir: Path | None) -> None:
     agent_config_path = supervisor_dir / "agent-config.json"
     agent_config = generate_default_agent_config()
     agent_config_path.write_text(json.dumps(agent_config, indent=4))
-    click.echo(f"Created agent config: {agent_config_path}")
+    created_agent = s(
+        "init.created_agent_config", path=f"[bold]{agent_config_path}[/bold]"
+    )
+    console.print(f"  [success]✓[/success] {created_agent}")
 
     prompts_src = Path(__file__).parent.parent / "agents" / "prompts"
     if prompts_src.is_dir():
         for prompt_file in prompts_src.glob("*.prompt.md"):
             dest = supervisor_dir / prompt_file.name
             shutil.copy2(prompt_file, dest)
-            click.echo(f"Created prompt: {dest}")
+            created_prompt = s("init.created_prompt", path=f"[bold]{dest}[/bold]")
+            console.print(f"  [success]✓[/success] {created_prompt}")
 
-    click.echo(f"\nSkillbot initialized at {root}")
-    click.echo("Next steps:")
-    click.echo(f"  1. Edit {config_path} to configure your model provider API key")
-    click.echo("  2. Run 'skillbot start' to start the agent server")
-    click.echo("  3. Run 'skillbot chat --user-id <your-id>' to start chatting")
-
-
-@cli.command()
-@click.option(
-    "--config",
-    "config_path",
-    type=click.Path(exists=True, path_type=Path),
-    default=None,
-    help="Path to skillbot.config.json.",
-)
-@click.option(
-    "--reload",
-    is_flag=True,
-    default=False,
-    help="Enable hot-reload on code changes (for development).",
-)
-def start(config_path: Path | None, reload: bool) -> None:
-    """Start Skillbot services."""
-    try:
-        skillbot_config = load_skillbot_config(config_path)
-    except FileNotFoundError as e:
-        click.echo(f"Error: {e}", err=True)
-        click.echo("Run 'skillbot init' first.", err=True)
-        sys.exit(1)
-
-    agent_services = skillbot_config.get_agent_services()
-    if not agent_services:
-        click.echo("No agent services configured.", err=True)
-        sys.exit(1)
-
-    click.echo("Starting Skillbot services...\n")
-
-    for name, svc in agent_services.items():
-        click.echo(f"  [{name}]")
-        click.echo(f"    Type: {svc.type}")
-        click.echo(f"    Port: {svc.port}")
-        click.echo(f"    URL:  http://localhost:{svc.port}")
-        click.echo(
-            f"    A2A Agent Card: http://localhost:{svc.port}/.well-known/agent-card.json"
-        )
-        click.echo()
-
-    first_service_name = next(iter(agent_services))
-    first_service = agent_services[first_service_name]
-
-    if reload:
-        import os
-
-        from skillbot.server.a2a_server import SKILLBOT_CONFIG_PATH_ENV
-
-        if config_path:
-            os.environ[SKILLBOT_CONFIG_PATH_ENV] = str(config_path.resolve())
-
-        click.echo(
-            f"Starting {first_service_name} on http://localhost:{first_service.port} "
-            "(reload enabled)"
-        )
-        uvicorn.run(
-            "skillbot.server.a2a_server:create_app",
-            factory=True,
-            host="0.0.0.0",
-            port=first_service.port,
-            reload=True,
-            reload_dirs=["skillbot"],
-        )
-        return
-
-    from skillbot.agents.supervisor import create_supervisor
-    from skillbot.server.a2a_server import create_a2a_app
-
-    executor = create_supervisor(
-        skillbot_config,
-        Path(first_service.config),
-    )
-
-    app = create_a2a_app(
-        agent_executor=executor,
-        name=first_service_name,
-        port=first_service.port,
-    )
-
-    click.echo(
-        f"Starting {first_service_name} on http://localhost:{first_service.port}"
-    )
-    uvicorn.run(app, host="0.0.0.0", port=first_service.port)
+    console.print(f"\n[success]{s('init.initialized', root=root)}[/success]\n")
+    console.print(f"[bold]{s('init.next_steps')}[/bold]")
+    console.print(f"  1. {s('init.step1', path=f'[bold]{config_path}[/bold]')}")
+    console.print(f"  2. {s('init.step2')}")
 
 
 @cli.command()
 @click.option(
     "--user-id",
-    required=True,
-    help="User ID for the chat session.",
+    default=None,
+    help="User ID for the chat session (required unless --background is set).",
 )
 @click.option(
     "--config",
@@ -189,74 +135,152 @@ def start(config_path: Path | None, reload: bool) -> None:
     help=f"Port of the supervisor agent. Default: {DEFAULT_SUPERVISOR_PORT}",
 )
 @click.option(
-    "--interface",
-    type=click.Choice(["text", "streamlit"], case_sensitive=False),
-    default="text",
-    help="Chat interface to use. Default: text",
+    "--background",
+    is_flag=True,
+    default=False,
+    help="Only start the server in the background (no chat interface).",
 )
-def chat(
-    user_id: str,
+@click.option(
+    "--reload",
+    is_flag=True,
+    default=False,
+    help="Enable hot-reload on code changes (for development).",
+)
+def start(
+    user_id: str | None,
     config_path: Path | None,
     port: int | None,
-    interface: str,
+    background: bool,
+    reload: bool,
 ) -> None:
-    """Start an interactive chat session with the supervisor agent."""
+    """Start Skillbot: launches the agent server and opens the chat interface."""
+    if not background and not user_id:
+        print_error(s("cli.user_id_required"))
+        sys.exit(1)
+
+    # Suppress library logs before httpx/uvicorn (e.g. server health check)
+    install_log_buffer()
+
+    print_banner()
+
     try:
         skillbot_config = load_skillbot_config(config_path)
-    except FileNotFoundError as e:
-        click.echo(f"Error: {e}", err=True)
-        click.echo("Run 'skillbot init' and 'skillbot start' first.", err=True)
+    except SkillbotError as e:
+        print_error(f"[{e.code.value}] {e.message}")
+        print_info(s("cli.run_init"))
         sys.exit(1)
 
     agent_services = skillbot_config.get_agent_services()
-    supervisor_port = port
-    if supervisor_port is None:
-        supervisor_svc = agent_services.get("supervisor")
-        supervisor_port = (
-            supervisor_svc.port if supervisor_svc else DEFAULT_SUPERVISOR_PORT
-        )
+    if not agent_services:
+        print_error(s("cli.no_services"))
+        sys.exit(1)
 
-    if interface == "streamlit":
-        _launch_streamlit(user_id, supervisor_port)
+    first_service_name = next(iter(agent_services))
+    first_service = agent_services[first_service_name]
+    supervisor_port = port or first_service.port
+
+    if reload:
+        _run_reload_mode(config_path, first_service_name, supervisor_port)
         return
 
-    click.echo(f"Skillbot Chat (user: {user_id})")
-    click.echo(f"Connected to supervisor at http://localhost:{supervisor_port}")
-    click.echo("Type 'exit' or 'quit' to end the session.\n")
+    if background:
+        _run_foreground_server(
+            skillbot_config,
+            config_path,
+            first_service_name,
+            first_service,
+            supervisor_port,
+        )
+        return
 
-    asyncio.run(_chat_loop(user_id, supervisor_port))
+    root_dir = skillbot_config.root_dir
+    assert user_id is not None  # Guaranteed: we exit if not background and not user_id
+    workspace_path = root_dir / "users" / user_id
+    log_dir = root_dir / "logs"
 
-
-def _launch_streamlit(user_id: str, port: int) -> None:
-    """Launch the Streamlit chat interface as a subprocess."""
-    import subprocess
-
-    app_path = Path(__file__).parent.parent / "channels" / "streamlit" / "app.py"
-    cmd = [
-        sys.executable,
-        "-m",
-        "streamlit",
-        "run",
-        str(app_path),
-        "--",
-        "--port",
-        str(port),
-    ]
-
-    click.echo(f"Launching Streamlit chat interface (user: {user_id}, port: {port})")
-    click.echo("  User ID can be set in the Streamlit sidebar.")
+    server = ServerProcess()
+    if not server.start(config_path, supervisor_port, log_dir):
+        sys.exit(1)
 
     try:
-        proc = subprocess.run(cmd, check=False)
-        sys.exit(proc.returncode)
-    except KeyboardInterrupt:
-        click.echo("\nStreamlit stopped.")
+        asyncio.run(
+            _chat_loop(user_id, supervisor_port, workspace_path, server, config_path)  # type: ignore[arg-type]
+        )
+    finally:
+        server.stop()
 
 
-async def _chat_loop(user_id: str, port: int) -> None:
-    """Interactive chat loop using the A2A client."""
+def _run_reload_mode(config_path: Path | None, service_name: str, port: int) -> None:
+    """Run uvicorn in reload mode (development)."""
+    import os
+
+    from skillbot.server.a2a_server import SKILLBOT_CONFIG_PATH_ENV
+
+    if config_path:
+        os.environ[SKILLBOT_CONFIG_PATH_ENV] = str(config_path.resolve())
+
+    print_info(s("cli.reload_starting", service=service_name, port=port))
+    uvicorn.run(
+        "skillbot.server.a2a_server:create_app",
+        factory=True,
+        host="0.0.0.0",
+        port=port,
+        reload=True,
+        reload_dirs=["skillbot"],
+    )
+
+
+def _run_foreground_server(
+    skillbot_config: Any,
+    config_path: Path | None,
+    service_name: str,
+    service: Any,
+    port: int,
+) -> None:
+    """Run the server in the foreground (--background mode)."""
+    from skillbot.agents.supervisor import create_supervisor
+    from skillbot.server.a2a_server import create_a2a_app
+
+    svc_table = Table(show_header=False, box=None, padding=(0, 1))
+    svc_table.add_column(style="dim")
+    svc_table.add_column()
+    svc_table.add_row("Type", str(service.type))
+    svc_table.add_row("Port", str(port))
+    svc_table.add_row("URL", f"[link]http://localhost:{port}[/link]")
+    svc_table.add_row(
+        "Agent Card",
+        f"[link]http://localhost:{port}/.well-known/agent-card.json[/link]",
+    )
+    console.print(
+        Panel(svc_table, title=f"[bold]{service_name}[/bold]", border_style="cyan")
+    )
+    console.print()
+
+    executor = create_supervisor(skillbot_config, Path(service.config))
+    app = create_a2a_app(
+        agent_executor=executor,
+        name=service_name,
+        port=port,
+        root_dir=skillbot_config.root_dir,
+    )
+
+    print_info(s("cli.foreground_starting", service=service_name, port=port))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
+
+async def _chat_loop(
+    user_id: str,
+    port: int,
+    workspace_path: Path,
+    server: ServerProcess,
+    config_path: Path | None,
+) -> None:
+    """Interactive chat loop using the A2A client with Rich TUI."""
+    from rich.status import Status
+
     from skillbot.channels.chat import (
         create_a2a_client,
+        extract_artifacts,
         extract_response_text,
         send_chat_message,
     )
@@ -264,54 +288,118 @@ async def _chat_loop(user_id: str, port: int) -> None:
     base_url = f"http://localhost:{port}"
 
     try:
-        httpx_client, client = await create_a2a_client(base_url)
+        with Status(
+            f"[bold bright_green]{s('chat.connecting')}[/bold bright_green]",
+            console=console,
+            spinner="dots",
+        ):
+            httpx_client, client, agent_card = await create_a2a_client(base_url)
     except Exception as e:
-        click.echo(f"Error connecting to supervisor: {e}", err=True)
-        click.echo(
-            "Make sure 'skillbot start' is running in another terminal.",
-            err=True,
-        )
+        err = SkillbotError(ErrorCode.SERVER_CONNECTION_FAILED, str(e))
+        print_error(s("cli.cannot_connect", error=err.message))
         return
+
+    print_welcome(user_id, port)
 
     context_id: str | None = None
     request_id = 0
+    last_artifacts: list[dict[str, Any]] = []
 
     try:
         while True:
-            try:
-                user_input = click.prompt("You", prompt_suffix="> ")
-            except (EOFError, KeyboardInterrupt):
-                click.echo("\nGoodbye!")
+            user_input = get_user_input()
+            if user_input is None:
+                print_goodbye()
                 break
 
-            if user_input.strip().lower() in {"exit", "quit"}:
-                click.echo("Goodbye!")
+            stripped = user_input.strip()
+            cmd = stripped.lower()
+
+            if cmd in {"exit", "quit", "/exit"}:
+                print_goodbye()
                 break
 
-            if not user_input.strip():
+            if not stripped:
                 continue
+
+            if cmd == "/traces":
+                print_traces(last_artifacts)
+                continue
+
+            if cmd == "/skills":
+                print_skills(agent_card)
+                continue
+
+            if cmd == "/agent-config":
+                print_agent_config(agent_card, port)
+                continue
+
+            if cmd == "/logs":
+                print_logs()
+                continue
+
+            if cmd == "/memories":
+                print_memories(user_id, workspace_path)
+                continue
+
+            if cmd == "/help":
+                print_help()
+                continue
+
+            if cmd == "/start":
+                if server.running:
+                    print_info(s("server.already_running_port", port=server.port))
+                else:
+                    log_dir = workspace_path.parent.parent / "logs"
+                    server.start(config_path, port, log_dir)
+                continue
+
+            if cmd == "/stop":
+                if server.running:
+                    server.stop()
+                    await httpx_client.aclose()
+                    print_info(s("server.reconnect_hint"))
+                else:
+                    print_info(s("server.not_running"))
+                continue
+
+            print_user_message(stripped)
 
             try:
                 request_id += 1
-                response = await send_chat_message(
-                    client=client,
-                    user_input=user_input,
-                    user_id=user_id,
-                    context_id=context_id,
-                    request_id=request_id,
-                )
+                with Status(
+                    create_spinner_message(),
+                    console=console,
+                    spinner="dots",
+                ):
+                    response = await send_chat_message(
+                        client=client,
+                        user_input=stripped,
+                        user_id=user_id,
+                        context_id=context_id,
+                        request_id=request_id,
+                    )
 
                 result = response.root
                 if hasattr(result, "result"):
                     task_or_msg = result.result
                     if hasattr(task_or_msg, "context_id"):
                         context_id = task_or_msg.context_id
-                    click.echo(f"Agent> {extract_response_text(task_or_msg)}")
+
+                    response_text = extract_response_text(task_or_msg)
+                    print_agent_message(response_text)
+
+                    last_artifacts = extract_artifacts(task_or_msg)
+                    if last_artifacts:
+                        console.print(f"[hint]  {s('chat.traces_hint')}[/hint]")
+
                 elif hasattr(result, "error"):
-                    click.echo(f"Error: {result.error.message}", err=True)
+                    print_error(result.error.message or "Unknown error")
+                    last_artifacts = []
 
             except Exception as e:
-                click.echo(f"Error: {e}", err=True)
+                print_error(str(e))
                 logger.exception("Chat error")
+                last_artifacts = []
     finally:
         await httpx_client.aclose()

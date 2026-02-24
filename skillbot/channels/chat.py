@@ -66,9 +66,10 @@ def extract_artifacts(response: object) -> list[dict[str, Any]]:
 async def create_a2a_client(
     base_url: str,
     timeout: float = 120.0,
-) -> tuple[httpx.AsyncClient, A2AClient]:
+) -> tuple[httpx.AsyncClient, A2AClient, Any]:
     """Create an httpx client and resolved A2A client for the given base URL.
 
+    Returns (httpx_client, a2a_client, agent_card).
     The caller is responsible for closing the returned httpx client.
     """
     httpx_client = httpx.AsyncClient(timeout=httpx.Timeout(timeout))
@@ -81,7 +82,7 @@ async def create_a2a_client(
         httpx_client=httpx_client,
         agent_card=card,
     )
-    return httpx_client, client
+    return httpx_client, client, card
 
 
 async def send_chat_message(

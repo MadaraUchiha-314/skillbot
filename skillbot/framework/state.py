@@ -14,6 +14,7 @@ class AgentState(TypedDict):
 
     messages: Annotated[list[AnyMessage], add_messages]
     task_description: str
+    task_id: str
     user_id: str
     workspace_path: str
 

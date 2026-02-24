@@ -1,0 +1,94 @@
+{
+  "banner": {
+    "tagline": "Your AI assistant, powered by skills"
+  },
+  "chat": {
+    "connecting": "Connecting to Skillbot…",
+    "help_hint": "Type /help to see available commands",
+    "connected_title": "Connected",
+    "no_traces": "No traces available for the last response.",
+    "traces_title": "Agent Traces",
+    "traces_panel": "Traces",
+    "traces_hint": "Type /traces to view detailed agent traces",
+    "thinking": "Thinking…",
+    "goodbye": "Goodbye! 👋",
+    "you_label": "You",
+    "skillbot_label": "Skillbot",
+    "prompt": "> "
+  },
+  "logs": {
+    "no_records": "No log records captured yet.",
+    "title": "Logs",
+    "time": "Time",
+    "level": "Level",
+    "logger": "Logger",
+    "message": "Message"
+  },
+  "skills": {
+    "none": "No skills advertised by this agent.",
+    "title": "Agent Skills",
+    "col_num": "#",
+    "col_name": "Name",
+    "col_description": "Description",
+    "col_tags": "Tags"
+  },
+  "agent_config": {
+    "title": "Agent Config",
+    "unknown": "unknown"
+  },
+  "help": {
+    "title": "Available Commands",
+    "col_command": "Command",
+    "col_description": "Description",
+    "traces": "View detailed traces from the last response",
+    "skills": "List skills advertised by the agent",
+    "agent_config": "Show agent card / configuration",
+    "logs": "Show captured log output",
+    "memories": "Show memory for the current user",
+    "start": "Start the agent server (if not running)",
+    "stop": "Stop the agent server (if running)",
+    "help": "Show this help message",
+    "exit": "Exit the chat session"
+  },
+  "memories": {
+    "none": "No memories stored for this user yet.",
+    "title": "Memories"
+  },
+  "server": {
+    "already_running": "Server already running on port {port} (pid {pid})",
+    "failed_start": "Server failed to start. Check logs with /logs.",
+    "started": "Server started on port {port} (pid {pid})",
+    "no_process": "No server process to stop.",
+    "stopped": "Server stopped (pid {pid}).",
+    "already_running_port": "Server is already running on port {port}.",
+    "reconnect_hint": "Reconnect after restarting with /start.",
+    "not_running": "Server is not running."
+  },
+  "init": {
+    "config_exists": "Config already exists at {path}",
+    "overwrite": "Overwrite?",
+    "created_config": "Created config: {path}",
+    "created_agent_config": "Created agent config: {path}",
+    "created_prompt": "Created prompt: {path}",
+    "initialized": "Skillbot initialized at {root}",
+    "next_steps": "Next steps:",
+    "step1": "Edit {path} to configure your model provider API key",
+    "step2": "Run [bold cyan]skillbot start --user-id <id>[/bold cyan] to start the server and begin chatting"
+  },
+  "cli": {
+    "user_id_required": "--user-id is required (or use --background to start server only).",
+    "run_init": "Run [bold]skillbot init[/bold] first.",
+    "no_services": "No agent services configured.",
+    "cannot_connect": "Cannot connect to supervisor: {error}",
+    "reload_starting": "Starting {service} on http://localhost:{port} (reload enabled)",
+    "foreground_starting": "Starting {service} on http://localhost:{port}"
+  },
+  "supervisor": {
+    "error_message": "[{code}] An error occurred while processing your request.",
+    "task_cancelled": "Task cancelled."
+  },
+  "config": {
+    "not_found": "Skillbot config not found at {path}. Run 'skillbot init' to create one.",
+    "agent_not_found": "Agent config not found at {path}."
+  }
+}

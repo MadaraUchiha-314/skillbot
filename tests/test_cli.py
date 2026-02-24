@@ -15,7 +15,6 @@ def test_cli_help() -> None:
     assert "Skillbot" in result.output
     assert "init" in result.output
     assert "start" in result.output
-    assert "chat" in result.output
 
 
 def test_init_command(tmp_path: Path) -> None:
@@ -65,8 +64,8 @@ def test_start_without_config() -> None:
     assert result.exit_code != 0
 
 
-def test_chat_requires_user_id() -> None:
+def test_start_requires_user_id_without_background() -> None:
     runner = CliRunner()
-    result = runner.invoke(cli, ["chat"])
+    result = runner.invoke(cli, ["start"])
     assert result.exit_code != 0
-    assert "user-id" in result.output.lower() or "missing" in result.output.lower()
+    assert "user-id" in result.output.lower()
