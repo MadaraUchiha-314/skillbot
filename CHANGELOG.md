@@ -1,3 +1,15 @@
+## v0.4.0 (2026-02-24)
+
+### Feat
+
+- add container execution (#6)
+
+### Fix
+
+- trigger build
+- cleanup (#5)
+- channels (#4)
+
 ## v0.3.0 (2026-02-23)
 
 ### Feat
