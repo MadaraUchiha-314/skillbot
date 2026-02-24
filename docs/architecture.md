@@ -58,8 +58,20 @@ A **single container** is created per user and reused for the entire agent lifec
 stateDiagram-v2
     [*] --> Removed: Agent not started
 
+    state "CLI start command" as CLIPull {
+        [*] --> CheckImage: ensure_image()
+        CheckImage --> PullImage: not found locally
+        CheckImage --> ImageReady: already present
+        PullImage --> ImageReady: podman pull
+        ImageReady --> [*]
+    }
+
+    CLIPull --> Init: image ready
+
     state "SupervisorExecutor.__init__()" as Init {
-        Removed --> Stopping: ensure_running() called
+        Removed --> EnsureImage: ensure_running() called
+        EnsureImage --> Stopping: image confirmed (no-op if already pulled)
+
         Stopping --> Creating: podman rm -f (clean slate)
 
         state "Container Setup" as Creating {
@@ -91,6 +103,7 @@ stateDiagram-v2
 
 **Key points:**
 - `ensure_running()` is called **once** during `SupervisorExecutor.__init__()`, not per script.
+- The container image is auto-pulled by the CLI `start` command before the server spawns (`podman image exists` → `podman pull`). `ensure_running()` also checks as a safety net.
 - The MVP always recreates the container on init (`stop → remove → create`) to avoid config drift (e.g. a skill with network access added after container was created without it).
 - The container runs `sleep infinity` as its entrypoint — it stays alive and idle between script executions.
 - Each `exec_script()` call runs `podman exec` against the existing container, not `podman run`.

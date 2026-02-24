@@ -25,7 +25,7 @@ An agentic bot powered by skills. Skillbot uses an LLM as its brain and [Agent S
 
 ## Quick Start
 
-Install skillbot from PyPI and pull the pre-built runtime image from GitHub Container Registry. No need to clone this repo.
+Install skillbot from PyPI — no need to clone this repo.
 
 ### Prerequisites
 
@@ -38,18 +38,12 @@ Install skillbot from PyPI and pull the pre-built runtime image from GitHub Cont
 pip install skillbot
 ```
 
-### 2. Pull the runtime image
+### 2. Initialize and configure
 
 ```bash
 # macOS only: ensure the Podman machine is running
 podman machine start
 
-podman pull ghcr.io/madarauchiha-314/skillbot-runtime:latest
-```
-
-### 3. Initialize and configure
-
-```bash
 skillbot init
 ```
 
@@ -66,11 +60,13 @@ The generated config points to the GHCR image by default:
 }
 ```
 
-### 4. Start skillbot
+### 3. Start skillbot
 
 ```bash
 skillbot start --user-id my-user
 ```
+
+The runtime container image is pulled automatically on first run if it isn't already available locally.
 
 ## Architecture
 

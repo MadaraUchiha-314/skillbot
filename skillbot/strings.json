@@ -81,7 +81,10 @@
     "no_services": "No agent services configured.",
     "cannot_connect": "Cannot connect to supervisor: {error}",
     "reload_starting": "Starting {service} on http://localhost:{port} (reload enabled)",
-    "foreground_starting": "Starting {service} on http://localhost:{port}"
+    "foreground_starting": "Starting {service} on http://localhost:{port}",
+    "pulling_image": "Pulling container image {image}…",
+    "image_ready": "Container image ready",
+    "image_pull_failed": "Failed to pull container image: {error}"
   },
   "supervisor": {
     "error_message": "[{code}] An error occurred while processing your request.",
