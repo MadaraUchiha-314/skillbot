@@ -1,3 +1,10 @@
+## v0.4.1 (2026-02-24)
+
+### Fix
+
+- re-trigger release after tagging v0.4.0
+- lowercase ghcr image tags in release workflow
+
 ## v0.4.0 (2026-02-24)
 
 ### Feat
