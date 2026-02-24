@@ -146,12 +146,18 @@ def init(root_dir: Path | None) -> None:
     default=False,
     help="Enable hot-reload on code changes (for development).",
 )
+@click.option(
+    "--image",
+    default=None,
+    help="Override the container image (e.g. skillbot-runtime:latest).",
+)
 def start(
     user_id: str | None,
     config_path: Path | None,
     port: int | None,
     background: bool,
     reload: bool,
+    image: str | None,
 ) -> None:
     """Start Skillbot: launches the agent server and opens the chat interface."""
     if not background and not user_id:
@@ -169,6 +175,9 @@ def start(
         print_error(f"[{e.code.value}] {e.message}")
         print_info(s("cli.run_init"))
         sys.exit(1)
+
+    if image:
+        skillbot_config.container.image = image
 
     agent_services = skillbot_config.get_agent_services()
     if not agent_services:

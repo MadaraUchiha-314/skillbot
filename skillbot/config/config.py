@@ -37,6 +37,12 @@ class PromptsConfig:
 
 
 @dataclass
+class ContainerConfig:
+    enabled: bool = True
+    image: str = "ghcr.io/madarauchiha-314/skillbot-runtime:latest"
+
+
+@dataclass
 class ServiceConfig:
     type: str = "agent"
     port: int = DEFAULT_SUPERVISOR_PORT
@@ -50,6 +56,7 @@ class SkillbotConfig:
     type: str = "skillbot.config"
     services: dict[str, ServiceConfig] = field(default_factory=dict)
     model_providers: dict[str, ModelProviderConfig] = field(default_factory=dict)
+    container: ContainerConfig = field(default_factory=ContainerConfig)
     root_dir: Path = field(default_factory=lambda: DEFAULT_ROOT_DIR)
 
     def get_agent_services(self) -> dict[str, ServiceConfig]:
@@ -105,10 +112,24 @@ def load_skillbot_config(config_path: Path | None = None) -> SkillbotConfig:
             base_url=mp_raw.get("base-url", ""),
         )
 
+    container_raw = raw.get("container", {})
+    container = ContainerConfig(
+        enabled=container_raw.get("enabled", True),
+        image=container_raw.get(
+            "image", "ghcr.io/madarauchiha-314/skillbot-runtime:latest"
+        ),
+    )
+
+    if not container.enabled:
+        raise SkillbotError(
+            ErrorCode.CONTAINER_DISABLED,
+        )
+
     return SkillbotConfig(
         type=raw.get("type", "skillbot.config"),
         services=services,
         model_providers=model_providers,
+        container=container,
         root_dir=root_dir,
     )
 
@@ -161,6 +182,10 @@ def generate_default_skillbot_config(root_dir: Path) -> dict[str, Any]:
                 "port": DEFAULT_SUPERVISOR_PORT,
                 "config": "supervisor/agent-config.json",
             }
+        },
+        "container": {
+            "enabled": True,
+            "image": "ghcr.io/madarauchiha-314/skillbot-runtime:latest",
         },
         "model-providers": {
             "openai": {

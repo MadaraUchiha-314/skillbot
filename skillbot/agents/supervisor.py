@@ -19,6 +19,7 @@ from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 from skillbot.config.config import AgentConfig, SkillbotConfig, load_agent_config
 from skillbot.errors import ErrorCode, SkillbotError
 from skillbot.framework.agent import AgentFramework
+from skillbot.skills.loader import discover_skills
 from skillbot.strings import get as s
 
 logger = logging.getLogger(__name__)
@@ -31,10 +32,53 @@ class SupervisorExecutor(AgentExecutor):  # type: ignore[misc]
         self,
         agent_config: AgentConfig,
         skillbot_config: SkillbotConfig,
+        user_id: str = "default",
     ) -> None:
         self.agent_config = agent_config
         self.skillbot_config = skillbot_config
-        self.framework = AgentFramework(agent_config, skillbot_config)
+
+        from skillbot.container.manager import ContainerManager
+
+        workspace_path = skillbot_config.root_dir / "users" / user_id
+        workspace_path.mkdir(parents=True, exist_ok=True)
+
+        # Collect skill mount paths, network requirements and deps from
+        # all configured skills (not just loaded ones) so the container
+        # is created with everything it might need.
+        skill_dirs = [
+            (agent_config.config_dir / p).resolve()
+            if not Path(str(p)).is_absolute()
+            else Path(str(p)).resolve()
+            for p in agent_config.skills.values()
+        ]
+        all_skills = discover_skills(skill_dirs)
+
+        skill_mount_paths = {
+            skill.name: skill.path / "scripts"
+            for skill in all_skills
+            if (skill.path / "scripts").is_dir()
+        }
+        requires_network = any(
+            skill.permissions.get("network", False) for skill in all_skills
+        )
+        pip_deps: list[str] = []
+        npm_deps: list[str] = []
+        for skill in all_skills:
+            deps = skill.dependencies
+            pip_deps.extend(deps.get("pip", []))
+            npm_deps.extend(deps.get("npm", []))
+
+        container_manager = ContainerManager(
+            user_id=user_id,
+            workspace_path=workspace_path,
+            image=skillbot_config.container.image,
+            skill_mount_paths=skill_mount_paths,
+        )
+        container_manager.ensure_running(requires_network, pip_deps, npm_deps)
+
+        self.framework = AgentFramework(
+            agent_config, skillbot_config, container_manager
+        )
         self._graph: Any = None
 
     async def _ensure_graph(self) -> Any:
@@ -193,7 +237,8 @@ def _extract_final_response(result: dict[str, Any]) -> str:
 def create_supervisor(
     skillbot_config: SkillbotConfig,
     agent_config_path: Path,
+    user_id: str = "default",
 ) -> SupervisorExecutor:
     """Factory function to create a SupervisorExecutor from config paths."""
     agent_config = load_agent_config(agent_config_path)
-    return SupervisorExecutor(agent_config, skillbot_config)
+    return SupervisorExecutor(agent_config, skillbot_config, user_id=user_id)
