@@ -179,6 +179,17 @@ def start(
     if image:
         skillbot_config.container.image = image
 
+    if skillbot_config.container.enabled:
+        from skillbot.container.manager import ensure_image
+
+        container_image = skillbot_config.container.image
+        try:
+            ensure_image(container_image)
+            print_info(s("cli.image_ready"))
+        except RuntimeError as e:
+            print_error(s("cli.image_pull_failed", error=str(e)))
+            sys.exit(1)
+
     agent_services = skillbot_config.get_agent_services()
     if not agent_services:
         print_error(s("cli.no_services"))

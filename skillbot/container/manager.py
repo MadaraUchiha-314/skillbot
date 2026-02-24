@@ -15,6 +15,29 @@ def _sanitize_user_id(user_id: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_.-]", "-", user_id)
 
 
+def ensure_image(image: str) -> None:
+    """Pull the container image if it is not available locally."""
+    result = subprocess.run(
+        ["podman", "image", "exists", image],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode == 0:
+        logger.debug("Image '%s' already available locally", image)
+        return
+
+    logger.info("Image '%s' not found locally, pulling...", image)
+    pull_result = subprocess.run(
+        ["podman", "pull", image],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if pull_result.returncode != 0:
+        raise RuntimeError(f"Failed to pull image '{image}': {pull_result.stderr}")
+    logger.info("Successfully pulled image '%s'", image)
+
+
 class ContainerManager:
     """Manages a per-user Podman container for isolated skill execution.
 
@@ -52,6 +75,7 @@ class ContainerManager:
         with network access was added after the container was created without
         network).
         """
+        self._ensure_image()
         self._stop_and_remove()
         self._create_and_start(requires_network)
         self._install_deps(pip_deps, npm_deps)
@@ -101,6 +125,10 @@ class ContainerManager:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _ensure_image(self) -> None:
+        """Pull the container image if it is not available locally."""
+        ensure_image(self.image)
 
     def _is_running(self) -> bool:
         """Return True if the container exists and is in a running state."""
