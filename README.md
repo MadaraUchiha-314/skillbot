@@ -165,7 +165,7 @@ skillbot/
 ├── skillbot/
 │   ├── agents/             # Agent implementations
 │   │   ├── prompts/        # Prompt templates (.prompt.md)
-│   │   └── supervisor.py   # Default supervisor agent
+│   │   └── agent_executor.py # Default agent executor
 │   ├── channels/           # Communication channels
 │   │   └── chat.py         # Shared A2A chat primitives
 │   ├── cli/

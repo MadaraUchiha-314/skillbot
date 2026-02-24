@@ -19,8 +19,8 @@ skillbot init
 This creates the default configuration at `~/.skillbot/`:
 
 - `skillbot.config.json` -- top-level config (services, model providers)
-- `supervisor/agent-config.json` -- agent config (model, prompts, skills)
-- `supervisor/*.prompt.md` -- default prompt templates
+- `default/agent-config.json` -- agent config (model, prompts, skills)
+- `default/*.prompt.md` -- default prompt templates
 
 ### 2. Configure
 
@@ -43,7 +43,7 @@ Edit `~/.skillbot/skillbot.config.json` to add your model provider API key:
 skillbot start --user-id alice
 ```
 
-This starts the supervisor agent server in the background and opens an interactive chat session.
+This starts the agent server in the background and opens an interactive chat session.
 
 To start the server without the chat interface:
 
@@ -69,7 +69,7 @@ Start the agent server and open the chat interface.
 | --- | --- | --- |
 | `--user-id TEXT` | User ID for the session (required unless `--background`) | -- |
 | `--config PATH` | Path to `skillbot.config.json` | `~/.skillbot/skillbot.config.json` |
-| `--port INT` | Port of the supervisor agent | `7744` |
+| `--port INT` | Port of the agent server | `7744` |
 | `--background` | Start server only, no chat interface | `false` |
 | `--reload` | Enable hot-reload for development | `false` |
 
@@ -80,11 +80,12 @@ Start the agent server and open the chat interface.
 ```json
 {
     "type": "skillbot.config",
+    "default-agent": "default",
     "services": {
-        "supervisor": {
+        "default": {
             "type": "agent",
             "port": 7744,
-            "config": "supervisor/agent-config.json"
+            "config": "default/agent-config.json"
         }
     },
     "model-providers": {
@@ -119,7 +120,7 @@ Start the agent server and open the chat interface.
 
 ## Agent Loop
 
-The supervisor follows a structured agent loop:
+The agent follows a structured agent loop:
 
 1. **Find Relevant Skills** -- LLM selects which skills are relevant for the task
 2. **Load Skills** -- Full skill content and scripts are loaded as tools

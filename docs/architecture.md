@@ -7,7 +7,7 @@ graph TD
     subgraph HOST["HOST MACHINE"]
         CLI["CLI / TUI<br/>(cli.py, tui.py)"]
         A2A["A2A HTTP Server<br/>(a2a_server.py)"]
-        SUP["Supervisor Executor<br/>(supervisor.py)"]
+        SUP["Agent Executor<br/>(agent_executor.py)"]
 
         subgraph AGENT["Agent Framework — LangGraph"]
             FRS["find_relevant_skills<br/>(LLM call)"]
@@ -68,7 +68,7 @@ stateDiagram-v2
 
     CLIPull --> Init: image ready
 
-    state "SupervisorExecutor.__init__()" as Init {
+    state "SkillbotAgentExecutor.__init__()" as Init {
         Removed --> EnsureImage: ensure_running() called
         EnsureImage --> Stopping: image confirmed (no-op if already pulled)
 
@@ -102,7 +102,7 @@ stateDiagram-v2
 ```
 
 **Key points:**
-- `ensure_running()` is called **once** during `SupervisorExecutor.__init__()`, not per script.
+- `ensure_running()` is called **once** during `SkillbotAgentExecutor.__init__()`, not per script.
 - The container image is auto-pulled by the CLI `start` command before the server spawns (`podman image exists` → `podman pull`). `ensure_running()` also checks as a safety net.
 - The MVP always recreates the container on init (`stop → remove → create`) to avoid config drift (e.g. a skill with network access added after container was created without it).
 - The container runs `sleep infinity` as its entrypoint — it stays alive and idle between script executions.
@@ -116,7 +116,7 @@ sequenceDiagram
     participant User
     participant TUI as CLI / TUI (Host)
     participant Server as A2A Server (Host)
-    participant Sup as SupervisorExecutor (Host)
+    participant Sup as SkillbotAgentExecutor (Host)
     participant Agent as Agent Framework (Host)
     participant CMgr as ContainerManager (Host)
     participant Container as Container (Podman)
@@ -190,7 +190,7 @@ graph LR
 | `skillbot/cli/tui.py` | Terminal user interface |
 | `skillbot/server/a2a_server.py` | FastAPI HTTP server |
 | `skillbot/framework/agent.py` | LangGraph agent with all 7 nodes |
-| `skillbot/agents/supervisor.py` | A2A AgentExecutor |
+| `skillbot/agents/agent_executor.py` | A2A AgentExecutor |
 | `skillbot/container/manager.py` | Podman lifecycle & `exec_script()` |
 | `skillbot/skills/loader.py` | Skill discovery & tool wrapping |
 | `skillbot/config/config.py` | Configuration loading |
