@@ -122,6 +122,38 @@ class ContainerManager:
         except Exception as e:
             return f"Error executing script in container: {e}"
 
+    def exec_command(self, command: str) -> str:
+        """Run an arbitrary shell command inside the container and return output."""
+        cmd = [
+            "podman",
+            "exec",
+            "-w",
+            "/workspace",
+            self.container_name,
+            "bash",
+            "-c",
+            command,
+        ]
+
+        logger.debug("Container exec command: %s", cmd)
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+            )
+            output = result.stdout
+            if result.returncode != 0:
+                output += f"\nSTDERR: {result.stderr}"
+                output += f"\nExit code: {result.returncode}"
+            return output.strip()
+        except subprocess.TimeoutExpired:
+            return "Error: Command execution timed out after 60 seconds"
+        except Exception as e:
+            return f"Error executing command in container: {e}"
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
