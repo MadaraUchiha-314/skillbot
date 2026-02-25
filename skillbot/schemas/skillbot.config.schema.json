@@ -88,6 +88,44 @@
                     "type": "string",
                     "default": "ghcr.io/madarauchiha-314/skillbot-runtime:latest",
                     "description": "Container image to use for skill execution."
+                },
+                "network": {
+                    "type": "string",
+                    "enum": ["none", "bridge", "host", "slirp4netns"],
+                    "default": "slirp4netns",
+                    "description": "Container network mode."
+                },
+                "cap-drop": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "default": ["ALL"],
+                    "description": "Linux capabilities to drop."
+                },
+                "cap-add": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "default": [],
+                    "description": "Linux capabilities to add."
+                },
+                "user": {
+                    "type": "string",
+                    "default": "1000:1000",
+                    "description": "User and group ID to run as (e.g. '1000:1000')."
+                },
+                "memory": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Memory limit (e.g. '512m')."
+                },
+                "cpus": {
+                    "type": "string",
+                    "default": "",
+                    "description": "CPU limit (e.g. '1.0')."
+                },
+                "read-only": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Mount the container root filesystem as read-only."
                 }
             },
             "additionalProperties": false

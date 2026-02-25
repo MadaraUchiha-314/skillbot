@@ -7,6 +7,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from skillbot.config.config import ContainerConfig
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,12 +52,13 @@ class ContainerManager:
         self,
         user_id: str,
         workspace_path: Path,
-        image: str,
+        container_config: ContainerConfig,
         skill_mount_paths: dict[str, Path],
     ) -> None:
         self.user_id = user_id
         self.workspace_path = workspace_path
-        self.image = image
+        self.container_config = container_config
+        self.image = container_config.image
         self.skill_mount_paths = skill_mount_paths
         self.container_name = f"skillbot-{_sanitize_user_id(user_id)}"
 
@@ -65,19 +68,16 @@ class ContainerManager:
 
     def ensure_running(
         self,
-        requires_network: bool,
         pip_deps: list[str],
         npm_deps: list[str],
     ) -> None:
         """Ensure the container exists and is running.
 
-        For MVP, always recreate to avoid configuration drift (e.g. a skill
-        with network access was added after the container was created without
-        network).
+        For MVP, always recreate to avoid configuration drift.
         """
         self._ensure_image()
         self._stop_and_remove()
-        self._create_and_start(requires_network)
+        self._create_and_start()
         self._install_deps(pip_deps, npm_deps)
         logger.info("Container '%s' is ready", self.container_name)
 
@@ -192,9 +192,9 @@ class ContainerManager:
         except Exception as e:
             logger.debug("Could not remove container '%s': %s", self.container_name, e)
 
-    def _create_and_start(self, requires_network: bool) -> None:
+    def _create_and_start(self) -> None:
         """Create and start the container with the appropriate mounts and network."""
-        network = "slirp4netns" if requires_network else "none"
+        cfg = self.container_config
 
         cmd = [
             "podman",
@@ -202,13 +202,23 @@ class ContainerManager:
             "-d",
             "--name",
             self.container_name,
-            "--cap-drop=ALL",
+            f"--network={cfg.network}",
             "--user",
-            "1000:1000",
-            f"--network={network}",
-            "-v",
-            f"{self.workspace_path}:/workspace:rw",
+            cfg.user,
         ]
+
+        for cap in cfg.cap_drop:
+            cmd.append(f"--cap-drop={cap}")
+        for cap in cfg.cap_add:
+            cmd.append(f"--cap-add={cap}")
+        if cfg.memory:
+            cmd.append(f"--memory={cfg.memory}")
+        if cfg.cpus:
+            cmd.append(f"--cpus={cfg.cpus}")
+        if cfg.read_only:
+            cmd.append("--read-only")
+
+        cmd += ["-v", f"{self.workspace_path}:/workspace:rw"]
 
         for skill_name, scripts_dir in self.skill_mount_paths.items():
             cmd += ["-v", f"{scripts_dir}:/skills/{skill_name}/scripts:ro"]

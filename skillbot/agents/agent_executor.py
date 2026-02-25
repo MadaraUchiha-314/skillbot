@@ -58,9 +58,6 @@ class SkillbotAgentExecutor(AgentExecutor):  # type: ignore[misc]
             for skill in all_skills
             if (skill.path / "scripts").is_dir()
         }
-        requires_network = any(
-            skill.permissions.get("network", False) for skill in all_skills
-        )
         pip_deps: list[str] = []
         npm_deps: list[str] = []
         for skill in all_skills:
@@ -71,10 +68,10 @@ class SkillbotAgentExecutor(AgentExecutor):  # type: ignore[misc]
         container_manager = ContainerManager(
             user_id=user_id,
             workspace_path=workspace_path,
-            image=skillbot_config.container.image,
+            container_config=skillbot_config.container,
             skill_mount_paths=skill_mount_paths,
         )
-        container_manager.ensure_running(requires_network, pip_deps, npm_deps)
+        container_manager.ensure_running(pip_deps, npm_deps)
 
         self.framework = AgentFramework(
             agent_config, skillbot_config, container_manager
