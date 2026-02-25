@@ -103,7 +103,7 @@ skillbot/
     loader.py         # Skill discovery, parsing SKILL.md frontmatter, loading scripts as tools
   config/
     __init__.py
-    config.py         # Config loading (skillbot.config.json, agent-config.json)
+    config.py         # Config loading (skillbot.config.json, agent.config.json)
   memory/
     __init__.py
     memory.py         # Read/write user memories (markdown files)
@@ -133,9 +133,9 @@ tests/
 ### 1. Config Module (`skillbot/config/config.py`)
 
 - `SkillbotConfig` dataclass: parses `skillbot.config.json` (services, model-providers)
-- `AgentConfig` dataclass: parses `agent-config.json` (model, skill-discovery, prompts, tools, skills)
+- `AgentConfig` dataclass: parses `agent.config.json` (model, skill-discovery, prompts, tools, skills)
 - Default config location: `~/.skillbot/skillbot.config.json`
-- Config loading resolves relative paths in `agent-config.json` relative to the config file's directory
+- Config loading resolves relative paths in `agent.config.json` relative to the config file's directory
 
 ### 2. Skills Module (`skillbot/skills/loader.py`)
 
@@ -188,7 +188,7 @@ class AgentState(TypedDict):
 
 ### 5. Supervisor Agent (`skillbot/agents/supervisor.py`)
 
-- The default agent instance; instantiates `AgentFramework` with the supervisor's `agent-config.json`
+- The default agent instance; instantiates `AgentFramework` with the supervisor's `agent.config.json`
 - Contains the `SupervisorExecutor(AgentExecutor)` class implementing the A2A `execute()` and `cancel()` methods
 - `execute()` maps the incoming A2A `Message` to the LangGraph state and invokes the graph
 
@@ -215,7 +215,7 @@ Using Click:
 
 - `**skillbot init [--root-dir PATH]**`:
   - Creates `<root-dir>/skillbot.config.json` (default: `~/.skillbot/`)
-  - Creates `<root-dir>/supervisor/agent-config.json` with defaults
+  - Creates `<root-dir>/supervisor/agent.config.json` with defaults
   - Creates default prompt files in `<root-dir>/supervisor/`
   - Interactive: asks for model provider, API key, base URL
 - `**skillbot start**`:

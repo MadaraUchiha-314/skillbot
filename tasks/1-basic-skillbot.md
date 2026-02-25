@@ -56,7 +56,7 @@
         "supervisor": {
             "type": "agent",
             "port": 7744,
-            "config": "<skill-bot-root-dir>/supervisor/agent-config.json"
+            "config": "<skill-bot-root-dir>/supervisor/agent.config.json"
         },
         // NOTE: Currently gateway is not implemented
         "gateway": {
@@ -73,7 +73,7 @@
 }
 ```
 
-- `agent-config.json` defines all the configurations related to the agent
+- `agent.config.json` defines all the configurations related to the agent
 ```json5
 {
     // Directory for the agent to store execution logs, memories etc

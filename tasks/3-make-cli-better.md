@@ -11,7 +11,7 @@
 
 - Add commands like 
     - /skills to show the loaded skills
-    - /agent-config to show the config of the current agent
+    - /agent.config to show the config of the current agent
     - /exit to exit the chat
     - /logs to show all the debug, info, error logs
     - /memories to show the memory for the user

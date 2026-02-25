@@ -32,7 +32,7 @@ def test_init_command(tmp_path: Path) -> None:
     assert config["type"] == "skillbot.config"
     assert "chat" in config["services"]
 
-    agent_config_file = root_dir / "chat" / "agent-config.json"
+    agent_config_file = root_dir / "chat" / "agent.config.json"
     assert agent_config_file.exists()
 
     agent_config = json.loads(agent_config_file.read_text())

@@ -93,7 +93,7 @@ def init(root_dir: Path | None) -> None:
     agent_dir = root / "chat"
     agent_dir.mkdir(parents=True, exist_ok=True)
 
-    agent_config_path = agent_dir / "agent-config.json"
+    agent_config_path = agent_dir / "agent.config.json"
     agent_config = generate_default_agent_config()
     agent_config_path.write_text(json.dumps(agent_config, indent=4))
     created_agent = s(
@@ -354,7 +354,7 @@ async def _chat_loop(
                 print_skills(agent_card)
                 continue
 
-            if cmd == "/agent-config":
+            if cmd == "/agent.config":
                 print_agent_config(agent_card, port)
                 continue
 

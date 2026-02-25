@@ -378,7 +378,7 @@ def print_skills(agent_card: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
-# /agent-config rendering
+# /agent.config rendering
 # ---------------------------------------------------------------------------
 
 
@@ -423,7 +423,7 @@ def _slash_commands() -> list[tuple[str, str]]:
     return [
         ("/traces", s("help.traces")),
         ("/skills", s("help.skills")),
-        ("/agent-config", s("help.agent_config")),
+        ("/agent.config", s("help.agent_config")),
         ("/logs", s("help.logs")),
         ("/memories", s("help.memories")),
         ("/start", s("help.start")),

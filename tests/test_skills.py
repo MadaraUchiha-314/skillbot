@@ -19,27 +19,26 @@ def _create_skill(base_dir: Path, name: str, description: str) -> Path:
 
 
 def test_discover_skills_empty(tmp_path: Path) -> None:
+    """A directory without SKILL.md yields no skills."""
     skills = discover_skills([tmp_path])
     assert skills == []
 
 
-def test_discover_skills_finds_skills(tmp_path: Path) -> None:
-    _create_skill(tmp_path, "test-skill", "A test skill for testing.")
-    _create_skill(tmp_path, "another-skill", "Another skill.")
+def test_discover_skills_finds_skill(tmp_path: Path) -> None:
+    skill_dir = _create_skill(tmp_path, "test-skill", "A test skill for testing.")
 
-    skills = discover_skills([tmp_path])
-    assert len(skills) == 2
-    names = {s.name for s in skills}
-    assert names == {"another-skill", "test-skill"}
+    skills = discover_skills([skill_dir])
+    assert len(skills) == 1
+    assert skills[0].name == "test-skill"
 
 
 def test_discover_skills_skips_invalid(tmp_path: Path) -> None:
-    _create_skill(tmp_path, "valid-skill", "Valid skill.")
+    valid_dir = _create_skill(tmp_path, "valid-skill", "Valid skill.")
     bad_dir = tmp_path / "bad-skill"
     bad_dir.mkdir()
     (bad_dir / "SKILL.md").write_text("---\nname: bad\n---\nNo description.\n")
 
-    skills = discover_skills([tmp_path])
+    skills = discover_skills([valid_dir, bad_dir])
     assert len(skills) == 1
     assert skills[0].name == "valid-skill"
 
@@ -60,8 +59,8 @@ def test_skill_metadata_to_discovery_dict() -> None:
 
 
 def test_load_skill(tmp_path: Path) -> None:
-    _create_skill(tmp_path, "my-skill", "My skill description.")
-    skills = discover_skills([tmp_path])
+    skill_dir = _create_skill(tmp_path, "my-skill", "My skill description.")
+    skills = discover_skills([skill_dir])
     assert len(skills) == 1
 
     content = load_skill(skills[0])
@@ -71,13 +70,10 @@ def test_load_skill(tmp_path: Path) -> None:
 
 
 def test_discover_skills_multiple_dirs(tmp_path: Path) -> None:
-    dir1 = tmp_path / "dir1"
-    dir1.mkdir()
-    _create_skill(dir1, "skill-a", "Skill A.")
+    skill_a = _create_skill(tmp_path, "skill-a", "Skill A.")
+    skill_b = _create_skill(tmp_path, "skill-b", "Skill B.")
 
-    dir2 = tmp_path / "dir2"
-    dir2.mkdir()
-    _create_skill(dir2, "skill-b", "Skill B.")
-
-    skills = discover_skills([dir1, dir2])
+    skills = discover_skills([skill_a, skill_b])
     assert len(skills) == 2
+    names = {s.name for s in skills}
+    assert names == {"skill-a", "skill-b"}

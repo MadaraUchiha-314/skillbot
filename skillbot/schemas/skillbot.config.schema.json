@@ -1,0 +1,96 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/MadaraUchiha-314/skillbot/blob/main/docs/schemas/skillbot.config.schema.json",
+    "title": "Skillbot Configuration",
+    "description": "Schema for skillbot.config.json - the top-level Skillbot configuration file.",
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "const": "skillbot.config",
+            "description": "Configuration file type identifier."
+        },
+        "default-agent": {
+            "type": "string",
+            "default": "chat",
+            "description": "Name of the default agent service to use."
+        },
+        "services": {
+            "type": "object",
+            "description": "Map of service name to service configuration.",
+            "additionalProperties": {
+                "$ref": "#/$defs/ServiceConfig"
+            }
+        },
+        "model-providers": {
+            "type": "object",
+            "description": "Map of provider name to model provider configuration.",
+            "additionalProperties": {
+                "$ref": "#/$defs/ModelProviderConfig"
+            }
+        },
+        "container": {
+            "$ref": "#/$defs/ContainerConfig"
+        }
+    },
+    "required": ["type"],
+    "additionalProperties": false,
+    "$defs": {
+        "ServiceConfig": {
+            "type": "object",
+            "description": "Configuration for a single service.",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["agent", "gateway"],
+                    "default": "agent",
+                    "description": "The type of service."
+                },
+                "port": {
+                    "type": "integer",
+                    "default": 7744,
+                    "description": "Port the service listens on."
+                },
+                "config": {
+                    "type": "string",
+                    "description": "Relative path to the agent's agent.config.json file."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ModelProviderConfig": {
+            "type": "object",
+            "description": "Configuration for a model provider.",
+            "properties": {
+                "api-key": {
+                    "type": "string",
+                    "default": "",
+                    "description": "API key for the model provider."
+                },
+                "base-url": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Base URL for the model provider API."
+                }
+            },
+            "additionalProperties": false
+        },
+        "ContainerConfig": {
+            "type": "object",
+            "description": "Container runtime configuration.",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether container execution is enabled."
+                },
+                "image": {
+                    "type": "string",
+                    "default": "ghcr.io/madarauchiha-314/skillbot-runtime:latest",
+                    "description": "Container image to use for skill execution."
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+}

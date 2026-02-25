@@ -17,6 +17,7 @@ dependencies = [
     "langgraph-checkpoint-sqlite>=3.0.3",
     "python-frontmatter>=1.1.0",
     "uvicorn>=0.41.0",
+    "jsonschema>=4.23.0",
     "rich>=14.0.0",
     "aiosqlite>=0.22.1",
 ]

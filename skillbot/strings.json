@@ -92,6 +92,7 @@
   },
   "config": {
     "not_found": "Skillbot config not found at {path}. Run 'skillbot init' to create one.",
-    "agent_not_found": "Agent config not found at {path}."
+    "agent_not_found": "Agent config not found at {path}.",
+    "schema_validation_failed": "Invalid {config_type} at {path}:\n  {error}"
   }
 }

@@ -22,6 +22,8 @@ class ErrorCode(StrEnum):
     AGENT_CONFIG_NOT_FOUND = "E1003"
     NO_SERVICES_CONFIGURED = "E1004"
     CONTAINER_DISABLED = "E1005"
+    CONFIG_SCHEMA_VALIDATION = "E1006"
+    AGENT_CONFIG_SCHEMA_VALIDATION = "E1007"
 
     SERVER_CONNECTION_FAILED = "E2001"
     SERVER_START_FAILED = "E2002"
@@ -43,6 +45,12 @@ ERROR_DESCRIPTIONS: dict[ErrorCode, str] = {
     ErrorCode.CONFIG_INVALID: "Skillbot configuration file is invalid.",
     ErrorCode.AGENT_CONFIG_NOT_FOUND: "Agent configuration file not found.",
     ErrorCode.NO_SERVICES_CONFIGURED: "No agent services are configured.",
+    ErrorCode.CONFIG_SCHEMA_VALIDATION: (
+        "skillbot.config.json failed schema validation."
+    ),
+    ErrorCode.AGENT_CONFIG_SCHEMA_VALIDATION: (
+        "agent.config.json failed schema validation."
+    ),
     ErrorCode.CONTAINER_DISABLED: (
         "Container execution is required."
         " Set container.enabled to true in skillbot.config.json"

@@ -15,7 +15,7 @@ from skillbot.config.config import (
     load_agent_config,
     load_skillbot_config,
 )
-from skillbot.errors import SkillbotError
+from skillbot.errors import ErrorCode, SkillbotError
 
 
 def test_generate_default_skillbot_config() -> None:
@@ -56,7 +56,7 @@ def test_load_skillbot_config_missing() -> None:
 
 def test_load_agent_config(tmp_path: Path) -> None:
     config_data = generate_default_agent_config()
-    config_file = tmp_path / "agent-config.json"
+    config_file = tmp_path / "agent.config.json"
     config_file.write_text(json.dumps(config_data))
 
     config = load_agent_config(config_file)
@@ -68,7 +68,7 @@ def test_load_agent_config(tmp_path: Path) -> None:
 
 def test_load_agent_config_missing() -> None:
     with pytest.raises(SkillbotError):
-        load_agent_config(Path("/nonexistent/agent-config.json"))
+        load_agent_config(Path("/nonexistent/agent.config.json"))
 
 
 def test_agent_config_resolve_prompt_path(tmp_path: Path) -> None:
@@ -96,3 +96,110 @@ def test_skillbot_config_get_agent_services() -> None:
     assert "agent1" in agents
     assert "agent2" in agents
     assert "gateway" not in agents
+
+
+# ---------------------------------------------------------------------------
+# Schema validation tests
+# ---------------------------------------------------------------------------
+
+
+def test_skillbot_config_rejects_unknown_property(tmp_path: Path) -> None:
+    config_data = generate_default_skillbot_config(tmp_path)
+    config_data["unknown-key"] = "oops"
+    config_file = tmp_path / "skillbot.config.json"
+    config_file.write_text(json.dumps(config_data))
+
+    with pytest.raises(SkillbotError) as exc_info:
+        load_skillbot_config(config_file)
+    assert exc_info.value.code == ErrorCode.CONFIG_SCHEMA_VALIDATION
+    assert "unknown-key" in exc_info.value.message
+
+
+def test_skillbot_config_rejects_wrong_type(tmp_path: Path) -> None:
+    config_data = generate_default_skillbot_config(tmp_path)
+    config_data["type"] = "wrong.type"
+    config_file = tmp_path / "skillbot.config.json"
+    config_file.write_text(json.dumps(config_data))
+
+    with pytest.raises(SkillbotError) as exc_info:
+        load_skillbot_config(config_file)
+    assert exc_info.value.code == ErrorCode.CONFIG_SCHEMA_VALIDATION
+    assert "wrong.type" in exc_info.value.message
+
+
+def test_skillbot_config_rejects_bad_service_port(tmp_path: Path) -> None:
+    config_data = generate_default_skillbot_config(tmp_path)
+    config_data["services"]["chat"]["port"] = "not-a-number"
+    config_file = tmp_path / "skillbot.config.json"
+    config_file.write_text(json.dumps(config_data))
+
+    with pytest.raises(SkillbotError) as exc_info:
+        load_skillbot_config(config_file)
+    assert exc_info.value.code == ErrorCode.CONFIG_SCHEMA_VALIDATION
+    assert (
+        "port" in exc_info.value.message.lower() or "integer" in exc_info.value.message
+    )
+
+
+def test_skillbot_config_rejects_bad_service_type(tmp_path: Path) -> None:
+    config_data = generate_default_skillbot_config(tmp_path)
+    config_data["services"]["chat"]["type"] = "invalid"
+    config_file = tmp_path / "skillbot.config.json"
+    config_file.write_text(json.dumps(config_data))
+
+    with pytest.raises(SkillbotError) as exc_info:
+        load_skillbot_config(config_file)
+    assert exc_info.value.code == ErrorCode.CONFIG_SCHEMA_VALIDATION
+    assert "'invalid'" in exc_info.value.message
+
+
+def test_agent_config_rejects_unknown_property(tmp_path: Path) -> None:
+    config_data = generate_default_agent_config()
+    config_data["bogus"] = True
+    config_file = tmp_path / "agent.config.json"
+    config_file.write_text(json.dumps(config_data))
+
+    with pytest.raises(SkillbotError) as exc_info:
+        load_agent_config(config_file)
+    assert exc_info.value.code == ErrorCode.AGENT_CONFIG_SCHEMA_VALIDATION
+    assert "bogus" in exc_info.value.message
+
+
+def test_agent_config_rejects_bad_skill_discovery(tmp_path: Path) -> None:
+    config_data = generate_default_agent_config()
+    config_data["skill-discovery"] = "magic"
+    config_file = tmp_path / "agent.config.json"
+    config_file.write_text(json.dumps(config_data))
+
+    with pytest.raises(SkillbotError) as exc_info:
+        load_agent_config(config_file)
+    assert exc_info.value.code == ErrorCode.AGENT_CONFIG_SCHEMA_VALIDATION
+    assert "'magic'" in exc_info.value.message
+
+
+def test_agent_config_rejects_bad_model_type(tmp_path: Path) -> None:
+    config_data = generate_default_agent_config()
+    config_data["model"] = "not-an-object"
+    config_file = tmp_path / "agent.config.json"
+    config_file.write_text(json.dumps(config_data))
+
+    with pytest.raises(SkillbotError) as exc_info:
+        load_agent_config(config_file)
+    assert exc_info.value.code == ErrorCode.AGENT_CONFIG_SCHEMA_VALIDATION
+    assert "object" in exc_info.value.message.lower() or "str" in exc_info.value.message
+
+
+def test_skillbot_config_reports_multiple_errors(tmp_path: Path) -> None:
+    config_data = {
+        "type": "wrong",
+        "extra": True,
+    }
+    config_file = tmp_path / "skillbot.config.json"
+    config_file.write_text(json.dumps(config_data))
+
+    with pytest.raises(SkillbotError) as exc_info:
+        load_skillbot_config(config_file)
+    assert exc_info.value.code == ErrorCode.CONFIG_SCHEMA_VALIDATION
+    # Should contain errors for both "type" const and "extra" additionalProperties
+    assert "wrong" in exc_info.value.message
+    assert "extra" in exc_info.value.message

@@ -19,7 +19,7 @@ skillbot init
 This creates the default configuration at `~/.skillbot/`:
 
 - `skillbot.config.json` -- top-level config (services, model providers)
-- `default/agent-config.json` -- agent config (model, prompts, skills)
+- `default/agent.config.json` -- agent config (model, prompts, skills)
 - `default/*.prompt.md` -- default prompt templates
 
 ### 2. Configure
@@ -85,7 +85,7 @@ Start the agent server and open the chat interface.
         "chat": {
             "type": "agent",
             "port": 7744,
-            "config": "chat/agent-config.json"
+            "config": "chat/agent.config.json"
         }
     },
     "model-providers": {
@@ -97,7 +97,7 @@ Start the agent server and open the chat interface.
 }
 ```
 
-### `agent-config.json`
+### `agent.config.json`
 
 ```json
 {

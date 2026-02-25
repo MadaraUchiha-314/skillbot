@@ -7,8 +7,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import jsonschema
+
 from skillbot.errors import ErrorCode, SkillbotError
 from skillbot.strings import get as s
+
+_SCHEMAS_DIR = Path(__file__).parent.parent / "schemas"
 
 DEFAULT_ROOT_DIR = Path.home() / ".skillbot"
 DEFAULT_CONFIG_FILENAME = "skillbot.config.json"
@@ -66,7 +70,7 @@ class SkillbotConfig:
 
 @dataclass
 class AgentConfig:
-    """Agent-specific agent-config.json configuration."""
+    """Agent-specific agent.config.json configuration."""
 
     model: ModelConfig = field(default_factory=ModelConfig)
     skill_discovery: str = "llm"
@@ -81,6 +85,55 @@ class AgentConfig:
         return (self.config_dir / raw).resolve()
 
 
+def _format_validation_error(error: jsonschema.ValidationError) -> str:
+    """Format a jsonschema ValidationError into a human-readable message."""
+    path = (
+        " → ".join(str(p) for p in error.absolute_path)
+        if error.absolute_path
+        else "(root)"
+    )
+    if error.validator == "additionalProperties":
+        return f"At '{path}': {error.message}"
+    if error.validator == "type":
+        actual = type(error.instance).__name__
+        return f"At '{path}': expected {error.validator_value}, got {actual}"
+    if error.validator == "enum":
+        return f"At '{path}': {error.instance!r} is not one of {error.validator_value}"
+    if error.validator == "const":
+        return (
+            f"At '{path}': expected {error.validator_value!r}, got {error.instance!r}"
+        )
+    if error.validator == "required":
+        return f"At '{path}': {error.message}"
+    return f"At '{path}': {error.message}"
+
+
+def _validate_against_schema(
+    data: dict[str, Any],
+    schema_filename: str,
+    config_path: Path,
+    error_code: ErrorCode,
+    config_type: str,
+) -> None:
+    """Validate a parsed config dict against a JSON Schema file."""
+    schema_path = _SCHEMAS_DIR / schema_filename
+    schema = json.loads(schema_path.read_text())
+    validator = jsonschema.Draft202012Validator(schema)
+    errors = sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path))
+    if errors:
+        messages = [_format_validation_error(e) for e in errors]
+        detail = "\n  ".join(messages)
+        raise SkillbotError(
+            error_code,
+            s(
+                "config.schema_validation_failed",
+                config_type=config_type,
+                path=config_path,
+                error=detail,
+            ),
+        )
+
+
 def load_skillbot_config(config_path: Path | None = None) -> SkillbotConfig:
     """Load and parse skillbot.config.json."""
     if config_path is None:
@@ -93,6 +146,15 @@ def load_skillbot_config(config_path: Path | None = None) -> SkillbotConfig:
         )
 
     raw = json.loads(config_path.read_text())
+
+    _validate_against_schema(
+        raw,
+        "skillbot.config.schema.json",
+        config_path,
+        ErrorCode.CONFIG_SCHEMA_VALIDATION,
+        "skillbot.config.json",
+    )
+
     root_dir = config_path.parent
 
     services: dict[str, ServiceConfig] = {}
@@ -137,7 +199,7 @@ def load_skillbot_config(config_path: Path | None = None) -> SkillbotConfig:
 
 
 def load_agent_config(config_path: Path) -> AgentConfig:
-    """Load and parse an agent-config.json file."""
+    """Load and parse an agent.config.json file."""
     if not config_path.exists():
         raise SkillbotError(
             ErrorCode.AGENT_CONFIG_NOT_FOUND,
@@ -145,6 +207,15 @@ def load_agent_config(config_path: Path) -> AgentConfig:
         )
 
     raw = json.loads(config_path.read_text())
+
+    _validate_against_schema(
+        raw,
+        "agent.config.schema.json",
+        config_path,
+        ErrorCode.AGENT_CONFIG_SCHEMA_VALIDATION,
+        "agent.config.json",
+    )
+
     config_dir = config_path.parent
 
     model_raw = raw.get("model", {})
@@ -183,7 +254,7 @@ def generate_default_skillbot_config(root_dir: Path) -> dict[str, Any]:
             "chat": {
                 "type": "agent",
                 "port": DEFAULT_AGENT_PORT,
-                "config": "chat/agent-config.json",
+                "config": "chat/agent.config.json",
             }
         },
         "container": {
@@ -200,7 +271,7 @@ def generate_default_skillbot_config(root_dir: Path) -> dict[str, Any]:
 
 
 def generate_default_agent_config() -> dict[str, Any]:
-    """Generate the default agent-config.json content."""
+    """Generate the default agent.config.json content."""
     return {
         "model": {
             "provider": "openai",

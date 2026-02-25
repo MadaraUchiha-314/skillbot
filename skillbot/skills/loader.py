@@ -35,25 +35,23 @@ class SkillMetadata:
 
 
 def discover_skills(directories: list[Path]) -> list[SkillMetadata]:
-    """Scan directories for folders containing SKILL.md and parse their metadata.
+    """Load skills from directories that each contain a SKILL.md file.
 
+    Each path must point directly to a skill directory containing a SKILL.md.
     Only reads YAML frontmatter to keep context small during discovery.
     """
     skills: list[SkillMetadata] = []
     for directory in directories:
         if not directory.is_dir():
             continue
-        for skill_dir in sorted(directory.iterdir()):
-            if not skill_dir.is_dir():
-                continue
-            skill_file = skill_dir / "SKILL.md"
-            if not skill_file.exists():
-                continue
-            try:
-                meta = _parse_skill_metadata(skill_file)
-                skills.append(meta)
-            except Exception:
-                continue
+        skill_file = directory / "SKILL.md"
+        if not skill_file.exists():
+            continue
+        try:
+            meta = _parse_skill_metadata(skill_file)
+            skills.append(meta)
+        except Exception:
+            continue
     return skills
 
 

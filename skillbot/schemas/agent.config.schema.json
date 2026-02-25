@@ -1,0 +1,85 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/MadaraUchiha-314/skillbot/blob/main/docs/schemas/agent.config.schema.json",
+    "title": "Agent Configuration",
+    "description": "Schema for agent.config.json - per-agent configuration file.",
+    "type": "object",
+    "properties": {
+        "model": {
+            "$ref": "#/$defs/ModelConfig"
+        },
+        "skill-discovery": {
+            "type": "string",
+            "enum": ["llm", "vector", "bm25"],
+            "default": "llm",
+            "description": "Method used for skill discovery."
+        },
+        "prompts": {
+            "$ref": "#/$defs/PromptsConfig"
+        },
+        "tools": {
+            "type": "object",
+            "description": "Additional tool configurations.",
+            "additionalProperties": true
+        },
+        "skills": {
+            "type": "object",
+            "description": "Map of skill name to skill directory path.",
+            "additionalProperties": {
+                "type": "string"
+            }
+        }
+    },
+    "additionalProperties": false,
+    "$defs": {
+        "ModelConfig": {
+            "type": "object",
+            "description": "LLM model configuration.",
+            "properties": {
+                "provider": {
+                    "type": "string",
+                    "default": "openai",
+                    "description": "Model provider name (e.g. openai, anthropic)."
+                },
+                "name": {
+                    "type": "string",
+                    "default": "gpt-4o",
+                    "description": "Model name (e.g. gpt-4o, claude-sonnet-4-20250514)."
+                }
+            },
+            "additionalProperties": false
+        },
+        "PromptsConfig": {
+            "type": "object",
+            "description": "Paths to prompt template files, relative to the agent config directory.",
+            "properties": {
+                "find-skills": {
+                    "type": "string",
+                    "default": "./find-skills.prompt.md",
+                    "description": "Prompt for selecting relevant skills."
+                },
+                "plan": {
+                    "type": "string",
+                    "default": "./plan.prompt.md",
+                    "description": "Prompt for creating an execution plan."
+                },
+                "reflect": {
+                    "type": "string",
+                    "default": "./reflect.prompt.md",
+                    "description": "Prompt for reflecting on execution results."
+                },
+                "create-memories": {
+                    "type": "string",
+                    "default": "./create-memories.prompt.md",
+                    "description": "Prompt for extracting key learnings to persist."
+                },
+                "summarize": {
+                    "type": "string",
+                    "default": "./summarize.prompt.md",
+                    "description": "Prompt for summarizing conversation history."
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+}
