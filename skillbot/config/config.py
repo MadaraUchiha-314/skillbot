@@ -57,7 +57,7 @@ class SkillbotConfig:
     services: dict[str, ServiceConfig] = field(default_factory=dict)
     model_providers: dict[str, ModelProviderConfig] = field(default_factory=dict)
     container: ContainerConfig = field(default_factory=ContainerConfig)
-    default_agent: str = "default"
+    default_agent: str = "chat"
     root_dir: Path = field(default_factory=lambda: DEFAULT_ROOT_DIR)
 
     def get_agent_services(self) -> dict[str, ServiceConfig]:
@@ -131,7 +131,7 @@ def load_skillbot_config(config_path: Path | None = None) -> SkillbotConfig:
         services=services,
         model_providers=model_providers,
         container=container,
-        default_agent=raw.get("default-agent", "default"),
+        default_agent=raw.get("default-agent", "chat"),
         root_dir=root_dir,
     )
 
@@ -178,12 +178,12 @@ def generate_default_skillbot_config(root_dir: Path) -> dict[str, Any]:
     """Generate the default skillbot.config.json content."""
     return {
         "type": "skillbot.config",
-        "default-agent": "default",
+        "default-agent": "chat",
         "services": {
-            "default": {
+            "chat": {
                 "type": "agent",
                 "port": DEFAULT_AGENT_PORT,
-                "config": "default/agent-config.json",
+                "config": "chat/agent-config.json",
             }
         },
         "container": {

@@ -21,10 +21,10 @@ from skillbot.errors import SkillbotError
 def test_generate_default_skillbot_config() -> None:
     config = generate_default_skillbot_config(Path("/tmp/test"))
     assert config["type"] == "skillbot.config"
-    assert "default" in config["services"]
-    assert config["services"]["default"]["type"] == "agent"
-    assert config["services"]["default"]["port"] == 7744
-    assert config["default-agent"] == "default"
+    assert "chat" in config["services"]
+    assert config["services"]["chat"]["type"] == "agent"
+    assert config["services"]["chat"]["port"] == 7744
+    assert config["default-agent"] == "chat"
 
 
 def test_generate_default_agent_config() -> None:
@@ -43,9 +43,9 @@ def test_load_skillbot_config(tmp_path: Path) -> None:
     config = load_skillbot_config(config_file)
     assert isinstance(config, SkillbotConfig)
     assert config.type == "skillbot.config"
-    assert "default" in config.services
-    assert config.services["default"].port == 7744
-    assert config.default_agent == "default"
+    assert "chat" in config.services
+    assert config.services["chat"].port == 7744
+    assert config.default_agent == "chat"
     assert config.root_dir == tmp_path
 
 

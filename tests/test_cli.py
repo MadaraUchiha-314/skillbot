@@ -30,9 +30,9 @@ def test_init_command(tmp_path: Path) -> None:
 
     config = json.loads(config_file.read_text())
     assert config["type"] == "skillbot.config"
-    assert "default" in config["services"]
+    assert "chat" in config["services"]
 
-    agent_config_file = root_dir / "default" / "agent-config.json"
+    agent_config_file = root_dir / "chat" / "agent-config.json"
     assert agent_config_file.exists()
 
     agent_config = json.loads(agent_config_file.read_text())
@@ -46,7 +46,7 @@ def test_init_creates_prompts(tmp_path: Path) -> None:
     result = runner.invoke(cli, ["init", "--root-dir", str(root_dir)])
     assert result.exit_code == 0
 
-    agent_dir = root_dir / "default"
+    agent_dir = root_dir / "chat"
     expected_prompts = [
         "find-skills.prompt.md",
         "plan.prompt.md",

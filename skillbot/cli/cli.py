@@ -90,7 +90,7 @@ def init(root_dir: Path | None) -> None:
     created = s("init.created_config", path=f"[bold]{config_path}[/bold]")
     console.print(f"  [success]✓[/success] {created}")
 
-    agent_dir = root / "default"
+    agent_dir = root / "chat"
     agent_dir.mkdir(parents=True, exist_ok=True)
 
     agent_config_path = agent_dir / "agent-config.json"

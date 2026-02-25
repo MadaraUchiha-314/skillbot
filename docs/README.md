@@ -80,12 +80,12 @@ Start the agent server and open the chat interface.
 ```json
 {
     "type": "skillbot.config",
-    "default-agent": "default",
+    "default-agent": "chat",
     "services": {
-        "default": {
+        "chat": {
             "type": "agent",
             "port": 7744,
-            "config": "default/agent-config.json"
+            "config": "chat/agent-config.json"
         }
     },
     "model-providers": {
