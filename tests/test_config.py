@@ -7,6 +7,7 @@ import pytest
 
 from skillbot.config.config import (
     AgentConfig,
+    ContainerConfig,
     ModelConfig,
     PromptsConfig,
     SkillbotConfig,
@@ -25,6 +26,15 @@ def test_generate_default_skillbot_config() -> None:
     assert config["services"]["chat"]["type"] == "agent"
     assert config["services"]["chat"]["port"] == 7744
     assert config["default-agent"] == "chat"
+    # Container defaults include new fields
+    container = config["container"]
+    assert container["network"] == "slirp4netns"
+    assert container["cap-drop"] == ["ALL"]
+    assert container["cap-add"] == []
+    assert container["user"] == "1000:1000"
+    assert container["memory"] == ""
+    assert container["cpus"] == ""
+    assert container["read-only"] is False
 
 
 def test_generate_default_agent_config() -> None:
@@ -47,6 +57,12 @@ def test_load_skillbot_config(tmp_path: Path) -> None:
     assert config.services["chat"].port == 7744
     assert config.default_agent == "chat"
     assert config.root_dir == tmp_path
+    # Container fields parsed from config
+    assert config.container.network == "slirp4netns"
+    assert config.container.cap_drop == ["ALL"]
+    assert config.container.cap_add == []
+    assert config.container.user == "1000:1000"
+    assert config.container.read_only is False
 
 
 def test_load_skillbot_config_missing() -> None:
@@ -96,6 +112,41 @@ def test_skillbot_config_get_agent_services() -> None:
     assert "agent1" in agents
     assert "agent2" in agents
     assert "gateway" not in agents
+
+
+# ---------------------------------------------------------------------------
+# ContainerConfig tests
+# ---------------------------------------------------------------------------
+
+
+def test_container_config_defaults() -> None:
+    cfg = ContainerConfig()
+    assert cfg.enabled is True
+    assert cfg.network == "slirp4netns"
+    assert cfg.cap_drop == ["ALL"]
+    assert cfg.cap_add == []
+    assert cfg.user == "1000:1000"
+    assert cfg.memory == ""
+    assert cfg.cpus == ""
+    assert cfg.read_only is False
+
+
+def test_load_skillbot_config_custom_container(tmp_path: Path) -> None:
+    config_data = generate_default_skillbot_config(tmp_path)
+    config_data["container"]["network"] = "none"
+    config_data["container"]["cap-add"] = ["NET_RAW"]
+    config_data["container"]["memory"] = "512m"
+    config_data["container"]["cpus"] = "1.0"
+    config_data["container"]["read-only"] = True
+    config_file = tmp_path / "skillbot.config.json"
+    config_file.write_text(json.dumps(config_data))
+
+    config = load_skillbot_config(config_file)
+    assert config.container.network == "none"
+    assert config.container.cap_add == ["NET_RAW"]
+    assert config.container.memory == "512m"
+    assert config.container.cpus == "1.0"
+    assert config.container.read_only is True
 
 
 # ---------------------------------------------------------------------------

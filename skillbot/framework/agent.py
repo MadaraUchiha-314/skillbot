@@ -272,9 +272,15 @@ class AgentFramework:
 
         prompt_template = _load_prompt(self.agent_config, "plan")
         skills_text = "\n\n---\n\n".join(state.get("loaded_skill_contents", []))
+        available_skills_info = json.dumps(
+            [s.to_discovery_dict() for s in self.all_skills], indent=2
+        )
         rendered = _render_prompt(
             prompt_template,
             {
+                "available_skills": available_skills_info
+                if self.all_skills
+                else "(No skills available)",
                 "loaded_skills": skills_text or "(No skills loaded)",
                 "memories": state.get("memories", "(No memories)"),
                 "task_description": state.get("task_description", ""),
@@ -488,4 +494,29 @@ class AgentFramework:
             skill = skills_by_name.get(name)
             if skill:
                 tools.extend(load_skill_scripts(skill, self.container_manager))
+
+        # Always register a general-purpose run_command tool when skills are
+        # loaded so the agent can execute shell commands from SKILL.md
+        # instructions (e.g. curl).
+        if selected_names:
+            mgr = self.container_manager
+
+            def run_command(command: str) -> str:
+                """Run a shell command inside the container."""
+                return mgr.exec_command(command)
+
+            from langchain_core.tools import StructuredTool
+
+            tools.append(
+                StructuredTool.from_function(
+                    func=run_command,
+                    name="run_command",
+                    description=(
+                        "Run a shell command inside the sandboxed container. "
+                        "Use this to execute commands described in skill instructions "
+                        "(e.g. curl, python, bash one-liners)."
+                    ),
+                )
+            )
+
         return tools

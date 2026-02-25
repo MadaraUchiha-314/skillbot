@@ -44,6 +44,13 @@ class PromptsConfig:
 class ContainerConfig:
     enabled: bool = True
     image: str = "ghcr.io/madarauchiha-314/skillbot-runtime:latest"
+    network: str = "slirp4netns"
+    cap_drop: list[str] = field(default_factory=lambda: ["ALL"])
+    cap_add: list[str] = field(default_factory=list)
+    user: str = "1000:1000"
+    memory: str = ""
+    cpus: str = ""
+    read_only: bool = False
 
 
 @dataclass
@@ -181,6 +188,13 @@ def load_skillbot_config(config_path: Path | None = None) -> SkillbotConfig:
         image=container_raw.get(
             "image", "ghcr.io/madarauchiha-314/skillbot-runtime:latest"
         ),
+        network=container_raw.get("network", "slirp4netns"),
+        cap_drop=container_raw.get("cap-drop", ["ALL"]),
+        cap_add=container_raw.get("cap-add", []),
+        user=container_raw.get("user", "1000:1000"),
+        memory=container_raw.get("memory", ""),
+        cpus=container_raw.get("cpus", ""),
+        read_only=container_raw.get("read-only", False),
     )
 
     if not container.enabled:
@@ -260,6 +274,13 @@ def generate_default_skillbot_config(root_dir: Path) -> dict[str, Any]:
         "container": {
             "enabled": True,
             "image": "ghcr.io/madarauchiha-314/skillbot-runtime:latest",
+            "network": "slirp4netns",
+            "cap-drop": ["ALL"],
+            "cap-add": [],
+            "user": "1000:1000",
+            "memory": "",
+            "cpus": "",
+            "read-only": False,
         },
         "model-providers": {
             "openai": {
