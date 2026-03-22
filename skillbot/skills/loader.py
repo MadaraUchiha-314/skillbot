@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import frontmatter
 from langchain_core.tools import StructuredTool
+from sherma.entities.skill_card import SkillCard
 
 if TYPE_CHECKING:
     from skillbot.container.manager import ContainerManager
@@ -32,6 +33,19 @@ class SkillMetadata:
             "name": self.name,
             "description": self.description,
         }
+
+    def to_sherma_skill_card(self) -> SkillCard:
+        """Convert to a sherma SkillCard for progressive skill disclosure."""
+        return SkillCard(
+            id=self.name,
+            version=self.compatibility or "1.0.0",
+            name=self.name,
+            description=self.description,
+            base_uri=str(self.path),
+            files=["SKILL.md"],
+            mcps={},
+            local_tools={},
+        )
 
 
 def discover_skills(directories: list[Path]) -> list[SkillMetadata]:

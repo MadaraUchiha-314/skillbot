@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -100,14 +99,6 @@ def init(root_dir: Path | None) -> None:
         "init.created_agent_config", path=f"[bold]{agent_config_path}[/bold]"
     )
     console.print(f"  [success]✓[/success] {created_agent}")
-
-    prompts_src = Path(__file__).parent.parent / "agents" / "prompts"
-    if prompts_src.is_dir():
-        for prompt_file in prompts_src.glob("*.prompt.md"):
-            dest = agent_dir / prompt_file.name
-            shutil.copy2(prompt_file, dest)
-            created_prompt = s("init.created_prompt", path=f"[bold]{dest}[/bold]")
-            console.print(f"  [success]✓[/success] {created_prompt}")
 
     console.print(f"\n[success]{s('init.initialized', root=root)}[/success]\n")
     console.print(f"[bold]{s('init.next_steps')}[/bold]")
@@ -262,7 +253,8 @@ def _run_foreground_server(
     port: int,
 ) -> None:
     """Run the server in the foreground (--background mode)."""
-    from skillbot.agents.agent_executor import create_agent_executor
+    from skillbot.agents.builder import create_agent_executor
+    from skillbot.config.config import load_agent_config
     from skillbot.server.a2a_server import create_a2a_app
 
     svc_table = Table(show_header=False, box=None, padding=(0, 1))
@@ -280,7 +272,15 @@ def _run_foreground_server(
     )
     console.print()
 
-    executor = create_agent_executor(skillbot_config, Path(service.config))
+    agent_config = load_agent_config(Path(service.config))
+    executor = asyncio.run(
+        create_agent_executor(
+            skillbot_config,
+            skills_config=agent_config.skills,
+            config_dir=agent_config.config_dir,
+            yaml_path=agent_config.resolve_agent_yaml_path(),
+        )
+    )
     app = create_a2a_app(
         agent_executor=executor,
         name=service_name,
