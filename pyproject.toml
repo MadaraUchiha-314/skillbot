@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "sherma @ file:///Users/rohithr31/code/github.com/MadaraUchiha-314/sherma",
+    "sherma @ git+https://github.com/MadaraUchiha-314/sherma.git",
     "a2a-sdk[http-server]>=0.3.24",
     "click>=8.3.1",
     "fastapi>=0.131.0",

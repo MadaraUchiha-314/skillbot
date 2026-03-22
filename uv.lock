@@ -1842,7 +1842,8 @@ wheels = [
 
 [[package]]
 name = "sherma"
-source = { directory = "../sherma" }
+version = "0.13.0"
+source = { git = "https://github.com/MadaraUchiha-314/sherma.git#90ea24ec4664a4bbe0b2e8d7a56fae589e34cda9" }
 dependencies = [
     { name = "a2a-sdk" },
     { name = "cel-python" },
@@ -1858,38 +1859,6 @@ dependencies = [
     { name = "packaging" },
     { name = "pydantic" },
     { name = "pyyaml" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "a2a-sdk", specifier = ">=0.3.0" },
-    { name = "cel-python", specifier = ">=0.5.0" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "langchain", specifier = ">=0.3.0" },
-    { name = "langchain-anthropic", specifier = ">=0.3.0" },
-    { name = "langchain-core", specifier = ">=0.3.0" },
-    { name = "langchain-mcp-adapters", specifier = ">=0.1.0" },
-    { name = "langchain-openai", specifier = ">=0.3.0" },
-    { name = "langfuse", specifier = ">=3.0.0" },
-    { name = "langgraph", specifier = ">=0.4.0" },
-    { name = "mcp", specifier = ">=1.0.0" },
-    { name = "nest-asyncio", marker = "extra == 'streamlit'", specifier = ">=1.6.0" },
-    { name = "packaging", specifier = ">=24.0" },
-    { name = "pydantic", specifier = ">=2.11.0" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "streamlit", marker = "extra == 'streamlit'", specifier = ">=1.40.0" },
-]
-provides-extras = ["streamlit"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "commitizen" },
-    { name = "pre-commit" },
-    { name = "pyright" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pyyaml" },
-    { name = "ruff" },
 ]
 
 [[package]]
@@ -1937,7 +1906,7 @@ requires-dist = [
     { name = "langgraph-checkpoint-sqlite", specifier = ">=3.0.3" },
     { name = "python-frontmatter", specifier = ">=1.1.0" },
     { name = "rich", specifier = ">=14.0.0" },
-    { name = "sherma", directory = "../sherma" },
+    { name = "sherma", git = "https://github.com/MadaraUchiha-314/sherma.git" },
     { name = "uvicorn", specifier = ">=0.41.0" },
 ]
 
