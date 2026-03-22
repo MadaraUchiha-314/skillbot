@@ -1842,8 +1842,8 @@ wheels = [
 
 [[package]]
 name = "sherma"
-version = "0.13.0"
-source = { git = "https://github.com/MadaraUchiha-314/sherma.git#90ea24ec4664a4bbe0b2e8d7a56fae589e34cda9" }
+version = "0.13.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "a2a-sdk" },
     { name = "cel-python" },
@@ -1859,6 +1859,10 @@ dependencies = [
     { name = "packaging" },
     { name = "pydantic" },
     { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e1/42/59e83fd5e009e0b15c3fb495794beeeebd70c0a8386efc9fb58b1e73ae44/sherma-0.13.1.tar.gz", hash = "sha256:8e2c47000c75a572f39c30916546b596206d35b3f96249a29abe6be9284e862c", size = 899103, upload-time = "2026-03-22T18:18:57.439Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c1/83/6777494b4a94bc64eceb24b257bb8067c1871c5312dfe0ea998641d8d6f1/sherma-0.13.1-py3-none-any.whl", hash = "sha256:6573ae1326ce12d54ae2574a6e2a268ebf318a35ee98e0022de8a1bce55470ea", size = 77466, upload-time = "2026-03-22T18:18:56.016Z" },
 ]
 
 [[package]]
@@ -1906,7 +1910,7 @@ requires-dist = [
     { name = "langgraph-checkpoint-sqlite", specifier = ">=3.0.3" },
     { name = "python-frontmatter", specifier = ">=1.1.0" },
     { name = "rich", specifier = ">=14.0.0" },
-    { name = "sherma", git = "https://github.com/MadaraUchiha-314/sherma.git" },
+    { name = "sherma", specifier = ">=0.13.1" },
     { name = "uvicorn", specifier = ">=0.41.0" },
 ]
 

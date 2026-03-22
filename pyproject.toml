@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "sherma @ git+https://github.com/MadaraUchiha-314/sherma.git",
+    "sherma>=0.13.1",
     "a2a-sdk[http-server]>=0.3.24",
     "click>=8.3.1",
     "fastapi>=0.131.0",
@@ -27,9 +27,6 @@ skillbot = "skillbot.cli.cli:cli"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["skillbot"]
