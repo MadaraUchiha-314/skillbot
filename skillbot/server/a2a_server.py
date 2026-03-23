@@ -88,8 +88,10 @@ def create_app() -> FastAPI:
     Reads config from the SKILLBOT_CONFIG_PATH environment variable,
     builds the agent executor and returns a fully wired FastAPI app.
     """
-    from skillbot.agents.agent_executor import create_agent_executor
-    from skillbot.config.config import load_skillbot_config
+    import asyncio
+
+    from skillbot.agents.builder import create_agent_executor
+    from skillbot.config.config import load_agent_config, load_skillbot_config
 
     config_path_str = os.environ.get(SKILLBOT_CONFIG_PATH_ENV)
     config_path = Path(config_path_str) if config_path_str else None
@@ -103,7 +105,15 @@ def create_app() -> FastAPI:
         service_name = next(iter(agent_services))
     service = agent_services[service_name]
 
-    executor = create_agent_executor(skillbot_config, Path(service.config))
+    agent_config = load_agent_config(Path(service.config))
+    executor = asyncio.run(
+        create_agent_executor(
+            skillbot_config,
+            skills_config=agent_config.skills,
+            config_dir=agent_config.config_dir,
+            yaml_path=agent_config.resolve_agent_yaml_path(),
+        )
+    )
     return create_a2a_app(
         agent_executor=executor,
         name=service_name,

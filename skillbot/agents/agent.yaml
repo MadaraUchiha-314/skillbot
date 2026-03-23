@@ -1,0 +1,138 @@
+# Skillbot Declarative Agent
+# A personal AI assistant with extensible skills and persistent memory.
+# Uses sherma's progressive skill disclosure: discover → load → execute.
+# Memory tools allow the agent to remember user preferences across sessions.
+# Tool nodes and conditional edges for tool calls are auto-injected by sherma.
+
+manifest_version: 1
+
+prompts:
+  - id: discover-skills
+    version: "1.0.0"
+    instructions: >
+      You are Skillbot, a personal AI assistant with extensible skills
+      and persistent memory.
+
+      Your first step is to understand the user's request and prepare:
+      1. Call load_user_memories to recall context from previous interactions.
+      2. Call list_skills to see what skills are available.
+      3. Call load_skill_md for the most relevant skill(s).
+
+      IMPORTANT: Call each tool at most once, then reply with a brief
+      summary of what you found. Do NOT repeat tool calls.
+
+  - id: plan-and-execute
+    version: "1.0.0"
+    instructions: >
+      You are Skillbot, a personal AI assistant. Based on the loaded skills
+      and user memories, plan and execute the user's request.
+
+      Use the available tools to accomplish the task. Be direct, helpful,
+      and efficient. If the user's request is simple (greeting, question),
+      just respond directly without unnecessary tool calls.
+
+  - id: reflect
+    version: "1.0.0"
+    instructions: >
+      Review the results so far. Determine if the task is complete.
+
+      If you have enough information to give the user a useful answer,
+      respond with "TASK_COMPLETE" followed by the final response.
+
+      If you learned something important about the user (preferences,
+      context, corrections), also call save_user_memories with the
+      updated memories before completing.
+
+      Err on the side of completing — a partial but helpful answer is
+      better than unnecessary extra rounds. Only respond with
+      "NEEDS_MORE_WORK" if critical information is clearly missing.
+
+  - id: summarize
+    version: "1.0.0"
+    instructions: >
+      The task is not yet complete. Briefly summarize progress and what
+      remains. This will inform the next attempt.
+
+llms:
+  - id: default-llm
+    version: "1.0.0"
+    provider: openai
+    model_name: gpt-4o
+
+default_llm:
+  id: default-llm
+  version: "1.0.0"
+
+agents:
+  skillbot:
+    langgraph_config:
+      recursion_limit: 50
+
+    state:
+      fields:
+        - name: messages
+          type: list
+          default: []
+
+    graph:
+      entry_point: discover_skills
+
+      nodes:
+        - name: discover_skills
+          type: call_llm
+          args:
+            prompt:
+              - role: system
+                content: 'prompts["discover-skills"]["instructions"]'
+              - role: messages
+                content: 'state.messages'
+            tools:
+              - id: list_skills
+              - id: load_skill_md
+              - id: load_user_memories
+
+        - name: execute
+          type: call_llm
+          args:
+            prompt:
+              - role: system
+                content: 'prompts["plan-and-execute"]["instructions"]'
+              - role: messages
+                content: 'state.messages'
+            use_tools_from_loaded_skills: true
+
+        - name: reflect
+          type: call_llm
+          args:
+            prompt:
+              - role: system
+                content: 'prompts["reflect"]["instructions"]'
+              - role: messages
+                content: 'state.messages'
+            tools:
+              - id: save_user_memories
+
+        - name: summarize
+          type: call_llm
+          args:
+            prompt:
+              - role: system
+                content: 'prompts["summarize"]["instructions"]'
+              - role: messages
+                content: 'state.messages'
+
+      edges:
+        - source: discover_skills
+          target: execute
+
+        - source: execute
+          target: reflect
+
+        - source: reflect
+          branches:
+            - condition: 'state.messages[size(state.messages) - 1]["content"].contains("TASK_COMPLETE")'
+              target: __end__
+          default: summarize
+
+        - source: summarize
+          target: execute

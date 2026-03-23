@@ -69,6 +69,34 @@ def test_load_skill(tmp_path: Path) -> None:
     assert "Instructions here." in content
 
 
+def test_skill_metadata_to_sherma_skill_card() -> None:
+    meta = SkillMetadata(
+        name="test-skill",
+        description="A test skill.",
+        path=Path("/tmp/test-skill"),
+        compatibility="2.0.0",
+    )
+    card = meta.to_sherma_skill_card()
+    assert card.id == "test-skill"
+    assert card.name == "test-skill"
+    assert card.description == "A test skill."
+    assert card.base_uri == "/tmp/test-skill"
+    assert card.version == "2.0.0"
+    assert "SKILL.md" in card.files
+    assert card.local_tools == {}
+    assert card.mcps == {}
+
+
+def test_skill_metadata_to_sherma_skill_card_default_version() -> None:
+    meta = SkillMetadata(
+        name="test",
+        description="Test.",
+        path=Path("/tmp/test"),
+    )
+    card = meta.to_sherma_skill_card()
+    assert card.version == "1.0.0"
+
+
 def test_discover_skills_multiple_dirs(tmp_path: Path) -> None:
     skill_a = _create_skill(tmp_path, "skill-a", "Skill A.")
     skill_b = _create_skill(tmp_path, "skill-b", "Skill B.")

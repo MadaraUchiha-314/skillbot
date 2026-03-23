@@ -7,8 +7,6 @@ import pytest
 
 from skillbot.config.config import (
     AgentConfig,
-    ModelConfig,
-    PromptsConfig,
     SkillbotConfig,
     generate_default_agent_config,
     generate_default_skillbot_config,
@@ -29,10 +27,8 @@ def test_generate_default_skillbot_config() -> None:
 
 def test_generate_default_agent_config() -> None:
     config = generate_default_agent_config()
-    assert config["model"]["provider"] == "openai"
-    assert config["skill-discovery"] == "llm"
-    assert "plan" in config["prompts"]
-    assert "reflect" in config["prompts"]
+    assert "skills" in config
+    assert isinstance(config["skills"], dict)
 
 
 def test_load_skillbot_config(tmp_path: Path) -> None:
@@ -61,9 +57,8 @@ def test_load_agent_config(tmp_path: Path) -> None:
 
     config = load_agent_config(config_file)
     assert isinstance(config, AgentConfig)
-    assert config.model.provider == "openai"
-    assert config.skill_discovery == "llm"
     assert config.config_dir == tmp_path
+    assert isinstance(config.skills, dict)
 
 
 def test_load_agent_config_missing() -> None:
@@ -71,14 +66,18 @@ def test_load_agent_config_missing() -> None:
         load_agent_config(Path("/nonexistent/agent.config.json"))
 
 
-def test_agent_config_resolve_prompt_path(tmp_path: Path) -> None:
+def test_agent_config_resolve_yaml_path(tmp_path: Path) -> None:
     config = AgentConfig(
-        model=ModelConfig(),
-        prompts=PromptsConfig(plan="./plan.prompt.md"),
+        agent_yaml="./custom-agent.yaml",
         config_dir=tmp_path,
     )
-    resolved = config.resolve_prompt_path("plan")
-    assert resolved == (tmp_path / "plan.prompt.md").resolve()
+    resolved = config.resolve_agent_yaml_path()
+    assert resolved == (tmp_path / "custom-agent.yaml").resolve()
+
+
+def test_agent_config_resolve_yaml_path_empty() -> None:
+    config = AgentConfig(config_dir=Path("/tmp"))
+    assert config.resolve_agent_yaml_path() is None
 
 
 def test_skillbot_config_get_agent_services() -> None:
@@ -163,30 +162,6 @@ def test_agent_config_rejects_unknown_property(tmp_path: Path) -> None:
         load_agent_config(config_file)
     assert exc_info.value.code == ErrorCode.AGENT_CONFIG_SCHEMA_VALIDATION
     assert "bogus" in exc_info.value.message
-
-
-def test_agent_config_rejects_bad_skill_discovery(tmp_path: Path) -> None:
-    config_data = generate_default_agent_config()
-    config_data["skill-discovery"] = "magic"
-    config_file = tmp_path / "agent.config.json"
-    config_file.write_text(json.dumps(config_data))
-
-    with pytest.raises(SkillbotError) as exc_info:
-        load_agent_config(config_file)
-    assert exc_info.value.code == ErrorCode.AGENT_CONFIG_SCHEMA_VALIDATION
-    assert "'magic'" in exc_info.value.message
-
-
-def test_agent_config_rejects_bad_model_type(tmp_path: Path) -> None:
-    config_data = generate_default_agent_config()
-    config_data["model"] = "not-an-object"
-    config_file = tmp_path / "agent.config.json"
-    config_file.write_text(json.dumps(config_data))
-
-    with pytest.raises(SkillbotError) as exc_info:
-        load_agent_config(config_file)
-    assert exc_info.value.code == ErrorCode.AGENT_CONFIG_SCHEMA_VALIDATION
-    assert "object" in exc_info.value.message.lower() or "str" in exc_info.value.message
 
 
 def test_skillbot_config_reports_multiple_errors(tmp_path: Path) -> None:
